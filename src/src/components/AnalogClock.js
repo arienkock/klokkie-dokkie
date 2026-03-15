@@ -126,7 +126,13 @@ export class AnalogClock {
       const pt = svgPoint(this.el, clientX, clientY);
       const angle = pointAngle(CX, CY, pt.x, pt.y);
       if (this._dragging === 'minute') {
+        const prev = this._minutes;
         this._minutes = angleToMinutes(angle);
+        if (prev > 45 && this._minutes < 15) {
+          this._hours = (this._hours + 1) % 24;
+        } else if (prev < 15 && this._minutes > 45) {
+          this._hours = (this._hours + 23) % 24;
+        }
       } else {
         const h12 = angleToHours12(angle);
         this._hours = h12 + (this._hours >= 12 ? 12 : 0);

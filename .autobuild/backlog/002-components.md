@@ -10,7 +10,7 @@ variation_instructions:
 Create two clock components: one analog, one digital.
 They both should take the same time representation as a property. Granularity = hours and minutes (no seconds).
 Digital clock should be a 24 hour clock (NO AM/PM).
-Analog clock should have the option to show or hide the numbers on the face. If no numbers there should be other indicators on the hours. The annalog clock's hands should be moveable via drag and drop.
+Analog clock should have the option to show or hide the numbers on the face. If no numbers there should be other indicators on the hours. The annalog clock's hands should be moveable via drag and drop. The hour hand should update if the minute hand moves, and the hour value of the shared state should update if the minute hand crosses the minute threshold. The minutes unput field should always display two numbers (just like the digital clock), and should have similar hour wrapping behavior.
 
 Create an app shell where we can display one of each of these components and inputs so we can update the time and see the responsive behavior. It should be easy to change the hours and numbers using HTML number input types with appropriate min max values. The state should always be in synch, whether the analog hands are oved, or changed via the inputs, the time in the store should always be in synch with the UI.
 
