@@ -1,0 +1,16 @@
+{
+  "name": "app",
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "test": "vitest run"
+  },
+  "dependencies": {
+    "@shoelace-style/shoelace": "^2.19.1"
+  },
+  "devDependencies": {
+    "vite": "^6.2.2",
+    "vitest": "^3.0.9",
+    "happy-dom": "^17.4.4"
+  }
+}

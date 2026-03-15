@@ -1,0 +1,19 @@
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  font-family: var(--sl-font-sans);
+  background: var(--sl-color-neutral-50);
+  color: var(--sl-color-neutral-900);
+}
+
+app-shell {
+  display: block;
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: var(--sl-spacing-large);
+}
