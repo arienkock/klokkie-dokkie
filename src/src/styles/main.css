@@ -1,19 +1,204 @@
-*,
-*::before,
-*::after {
-  box-sizing: border-box;
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+:root {
+  --color-bg: #f5f5f5;
+  --color-surface: #ffffff;
+  --color-border: #e0e0e0;
+  --color-text: #1a1a1a;
+  --color-text-muted: #757575;
+  --color-accent: #1a1a1a;
+  --color-hand-hour: #1a1a1a;
+  --color-hand-minute: #444;
+  --color-face: #fff;
+  --color-rim: #1a1a1a;
+  --color-marker: #1a1a1a;
+  --radius: 8px;
+  --gap: 24px;
+  --font: system-ui, -apple-system, sans-serif;
 }
 
 body {
-  margin: 0;
-  font-family: var(--sl-font-sans);
-  background: var(--sl-color-neutral-50);
-  color: var(--sl-color-neutral-900);
+  font-family: var(--font);
+  background: var(--color-bg);
+  color: var(--color-text);
+  min-height: 100vh;
+  display: flex;
+  align-items: flex-start;
+  justify-content: center;
+  padding: 32px 16px;
 }
 
-app-shell {
+.app {
+  width: 100%;
+  max-width: 800px;
+  display: grid;
+  gap: var(--gap);
+}
+
+.app-title {
+  font-size: 13px;
+  font-weight: 600;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--color-text-muted);
+}
+
+.clock-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: var(--gap);
+  align-items: center;
+}
+
+.clock-cell {
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius);
+  padding: var(--gap);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 240px;
+}
+
+.controls {
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius);
+  padding: 20px var(--gap);
+  display: flex;
+  align-items: center;
+  gap: var(--gap);
+}
+
+.field {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.field--inline {
+  flex-direction: row;
+  align-items: center;
+  gap: 10px;
+}
+
+.field-label {
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--color-text-muted);
+}
+
+.field-input {
+  font-family: var(--font);
+  font-size: 14px;
+  font-weight: 500;
+  color: var(--color-text);
+  background: var(--color-bg);
+  border: 1px solid var(--color-border);
+  border-radius: 4px;
+  padding: 6px 10px;
+  width: 80px;
+  outline: none;
+  transition: border-color 0.15s;
+}
+
+.field-input:focus {
+  border-color: var(--color-accent);
+}
+
+input[type="checkbox"] {
+  width: 16px;
+  height: 16px;
+  cursor: pointer;
+  accent-color: var(--color-accent);
+}
+
+/* Analog Clock SVG */
+.analog-clock {
+  width: 100%;
+  max-width: 200px;
   display: block;
-  max-width: 1200px;
-  margin: 0 auto;
-  padding: var(--sl-spacing-large);
+  user-select: none;
+}
+
+.clock-face {
+  fill: var(--color-face);
+}
+
+.clock-rim {
+  fill: none;
+  stroke: var(--color-rim);
+  stroke-width: 2.5;
+}
+
+.hour-tick {
+  stroke: var(--color-marker);
+  stroke-width: 2;
+  stroke-linecap: round;
+}
+
+.hour-num {
+  font-family: var(--font);
+  font-size: 12px;
+  font-weight: 500;
+  fill: var(--color-text);
+}
+
+.hour-dot {
+  fill: var(--color-marker);
+}
+
+.hour-hand {
+  stroke: var(--color-hand-hour);
+  stroke-width: 4;
+  stroke-linecap: round;
+}
+
+.minute-hand {
+  stroke: var(--color-hand-minute);
+  stroke-width: 2.5;
+  stroke-linecap: round;
+}
+
+.hand-hit {
+  stroke: transparent;
+  stroke-width: 16;
+  cursor: grab;
+}
+
+.hand-hit:active {
+  cursor: grabbing;
+}
+
+.center-dot {
+  fill: var(--color-rim);
+}
+
+/* Digital Clock */
+.digital-clock {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+}
+
+.digital-time {
+  font-size: clamp(36px, 8vw, 64px);
+  font-weight: 300;
+  letter-spacing: 0.04em;
+  font-variant-numeric: tabular-nums;
+  color: var(--color-text);
+  line-height: 1;
+}
+
+@media (max-width: 540px) {
+  .clock-grid {
+    grid-template-columns: 1fr;
+  }
+  .controls {
+    flex-wrap: wrap;
+  }
 }

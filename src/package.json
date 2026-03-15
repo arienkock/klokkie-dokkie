@@ -3,7 +3,7 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
-    "test": "vitest run"
+    "test": "node node_modules/vitest/vitest.mjs run"
   },
   "dependencies": {
     "@shoelace-style/shoelace": "^2.19.1"

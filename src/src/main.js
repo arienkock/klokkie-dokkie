@@ -1,32 +1,36 @@
-import '@shoelace-style/shoelace/dist/components/button/button.js';
-import '@shoelace-style/shoelace/dist/components/badge/badge.js';
-import '@shoelace-style/shoelace/dist/components/input/input.js';
-import '@shoelace-style/shoelace/dist/components/dialog/dialog.js';
-import { setBasePath } from '@shoelace-style/shoelace/dist/utilities/base-path.js';
+import { createStore } from './store.js';
+import { DigitalClock } from './components/DigitalClock.js';
+import { AnalogClock } from './components/AnalogClock.js';
 
-import './components/app-shell.js';
-import './components/app-card.js';
+const store = createStore({ hours: 10, minutes: 10 });
 
-setBasePath('/node_modules/@shoelace-style/shoelace/dist');
+const digital = new DigitalClock();
+const analog  = new AnalogClock({ showNumbers: true });
 
-const shell = document.querySelector('app-shell');
+analog.onChange(time => store.setTime(time));
 
-shell.innerHTML = `
-  <span slot="title">My App</span>
-  <sl-button slot="actions" variant="primary" size="small">New item</sl-button>
+store.subscribe(time => {
+  digital.update(time);
+  if (!analog.isDragging) analog.update(time);
+  document.getElementById('hours').value   = time.hours;
+  document.getElementById('minutes').value = time.minutes;
+});
 
-  <app-card label="welcome">
-    <h2 slot="header">Welcome</h2>
-    <p>Start building your app here. This scaffold includes:</p>
-    <ul>
-      <li>Shoelace Web Components</li>
-      <li>Custom Web Components (<code>app-shell</code>, <code>app-card</code>)</li>
-      <li>DOM utilities</li>
-      <li>Vitest for testing</li>
-      <li>Vite dev server</li>
-    </ul>
-    <div slot="footer">
-      <sl-badge variant="success">Ready</sl-badge>
-    </div>
-  </app-card>
-`;
+document.getElementById('analog-mount').appendChild(analog.el);
+document.getElementById('digital-mount').appendChild(digital.el);
+
+document.getElementById('hours').addEventListener('input', e => {
+  const v = parseInt(e.target.value, 10);
+  if (!isNaN(v)) store.setTime({ hours: v });
+});
+
+document.getElementById('minutes').addEventListener('input', e => {
+  const v = parseInt(e.target.value, 10);
+  if (!isNaN(v)) store.setTime({ minutes: v });
+});
+
+document.getElementById('show-numbers').addEventListener('change', e => {
+  analog.showNumbers = e.target.checked;
+});
+
+store.setTime(store.getTime());
