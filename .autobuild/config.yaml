@@ -1,0 +1,93 @@
+# Autobuild configuration
+#
+# This file documents where Autobuild expects to find its inputs and where it
+# writes results. The orchestrator can also be driven directly via its Python
+# API if you need more control.
+
+backlog-dir: ".autobuild/backlog"
+results-dir: ".autobuild/results"
+
+# Subdirectory of the repo that contains the project source code.
+# Only this directory is copied into each workspace; the winner is merged back here.
+src_dir: "src"
+
+
+# Default variation instructions used when a task file omits variation_instructions.
+# 1 to 3 entries are supported (one per variation). Task-level instructions take
+# precedence over these defaults.
+#
+# Each entry is an object with at least one of: prompt, agent, model.
+# A plain string is shorthand for { prompt: "..." }.
+# - prompt: instruction text passed to the LLM for this variation
+# - agent:  name of an agent defined under `agents` (default_agent is used when omitted)
+# - model:  model override for this variation, replacing the agent's default model
+default_variation_instructions:
+  - "You are a ATDD expert. Write the tests first at a functional level, then the code."
+  - "You are an world-class software engineer."
+  - "You are an expert developer, but you also have a PhD in statistics and machine learning."
+
+# default_variation_instructions:
+#   - agent: cursor
+#   - agent: aider
+#     model: "openrouter/z-ai/glm-5"
+#   - agent: claude
+#     model: "claude-opus-4-5"
+
+
+# Optional dedicated judge configuration.
+# When omitted, the default_agent is used for judging.
+# Specify agent and/or model to use a different combination for the judge role.
+# This is useful when the implementation variations experiment involves the
+# default agent and you want an independent judge.
+#
+# judge:
+#   agent: claude
+#   model: "claude-opus-4-5"
+
+
+# Per-attempt timeouts for the implementation step (seconds).
+# implementation: caps the first attempt; retry: caps each subsequent attempt.
+# Omit a key (or set to null) for no limit on that step.
+#
+timeouts:
+  implementation: 360
+  retry: 180
+
+
+# Quality gates run in the workspace after each implementation attempt.
+# Each entry is a shell command; all must exit 0 for the attempt to pass.
+# Adjust these when changing language, test framework, or analysis tools.
+quality_gates:
+  - "npm run test"
+
+# LLM quality gates: single-workspace evaluations run after shell quality gates pass.
+# Each name maps to a .autobuild/gates/<name>.md file with a PASS/FAIL prompt.
+# On FAIL, the reasoning is fed back to the LLM as context for the next retry.
+llm_quality_gates:
+  - faithfulness
+  - testing_quality
+  - ui_quality
+
+
+# CLI agent to use. Set default_agent to the name of an entry under agents.
+# Placeholders: {prompt}, {workspace}, {model}. Other {NAME} = environment variable.
+# Use [optional args] so that part is omitted when the env var inside is unset
+# (e.g. [--api-key {CURSOR_API_KEY}] is dropped when CURSOR_API_KEY is not set).
+default_agent: claude
+
+agents:
+  cursor:
+    implement_command: "agent --print --trust --force --approve-mcps [--api-key {CURSOR_API_KEY}] --workspace {workspace} --model {model} {prompt}"
+    compare_command: "agent --print --trust --mode ask --approve-mcps [--api-key {CURSOR_API_KEY}] --workspace {workspace} --model {model} {prompt}"
+    model: "auto"
+
+  claude:
+    implement_command: "claude --print --dangerously-skip-permissions --no-session-persistence --model {model} {prompt}"
+    compare_command: "claude --print --permission-mode plan --no-session-persistence --model {model} {prompt}"
+    model: "sonnet"
+
+  aider:
+    implement_command: "aider --yes --no-git --model {model} --message {prompt}"
+    compare_command: "aider --yes --no-git --model {model} --read {path_a} --read {path_b} --message {prompt}"
+    model: "openrouter/z-ai/glm-5"
+
