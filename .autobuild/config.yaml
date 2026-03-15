@@ -50,8 +50,8 @@ default_variation_instructions:
 # Omit a key (or set to null) for no limit on that step.
 #
 timeouts:
-  implementation: 360
-  retry: 180
+  implementation: 720
+  retry: 360
 
 
 # Quality gates run in the workspace after each implementation attempt.

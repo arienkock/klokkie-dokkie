@@ -8,11 +8,11 @@ variation_instructions:
 
 Implement a game loop. The page should have a "Start" button with nothing else. The UI language should be Dutch. After clicking start the user is shown a question ("Wat wil je oefenen?") and three choices: "Analoog", "Digitaal", "Beide"
 
-After clicking it, the user will be shown (in a loop) pairs of a digital and an analog clock. Each time one of the two is editable, while the other is not. Which one needs to be edited should be clearly indicated. The goal is for the user to match the time that's on the other clock. The times should be randomized for each problem/round. However, the editable clock shouldn't be too far off of the target (answer) clock's time. Otherwise it would take a lot of clicking/effort to fill in the right answer. So the user-editable clock should be no further than 90 minutes before or after the target time. Which clock is editable depends on the game mode chosen at the beginning.
+After clicking it, the user will be shown (in a loop) pairs of a digital and an analog clock. Each time one of the two is editable, while the other is not. Which one needs to be edited should be clearly indicated. The goal is for the user to match the time that's on the other clock. The times should be randomized for each problem/round.
 
-For this to work well the digital clock component needs to be made editable. Add controls that allow the user to increase and decrease both the hour and minutes of the digital clock.
+For this to work well the digital clock component needs to be made editable. Add controls that allow the user to increase and decrease the individual digits of the hour and minutes of the digital clock.
 
-The main app lives ona  single index page, but NO CLIENT SIDE ROUTING! The index.html should be easily servable via a static content server with no special SPA routing needed. Putting state in the querystring is allowed, but no path changes.
+The main app lives on a single index page, but NO CLIENT SIDE ROUTING! The index.html should be easily servable via a static content server with no special SPA routing needed. Putting state in the querystring is allowed, but no path changes.
 
 Use a central state store with access and mutation methods. But don't use a library for a store, only plain js.
 
