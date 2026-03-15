@@ -1,8 +1,6 @@
 ---
 id: "001"
 title: Scaffold a project
-extensibility_scenario: |
-  Adding new UI components or new test cases should require minimal changes to the project files.
 variation_instructions:
  - "Research the which component library fits best with our simple no-framework philosophy"
 ---
