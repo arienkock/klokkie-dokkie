@@ -149,10 +149,13 @@ describe('createGameStore', () => {
     store.selectMode('analoog');
     store.selectMinutesLevel(4);
     store.selectHourMode('12h');
-    store.setEditTime({ hours: 2, minutes: 2 });
+    const { referenceTime } = store.get();
+    const refH = referenceTime.hours % 12;
+    const wrongTime = { hours: refH === 1 ? 2 : 1, minutes: referenceTime.minutes === 0 ? 5 : 0 };
+    store.setEditTime(wrongTime);
     store.check();
     expect(store.get().checked).toBe(true);
-    expect(typeof store.get().correct).toBe('boolean');
+    expect(store.get().correct).toBe(false);
   });
 
   it('goToMinutesSelect changes screen', () => {
@@ -172,13 +175,88 @@ describe('createGameStore', () => {
     expect(store.get().editTarget).toBe('analog');
   });
 
-  it('editTarget for beide mode alternates', () => {
+  it('editTarget for beide mode is one of the three component types', () => {
     const store = createGameStore();
     store.selectMode('beide');
     store.selectMinutesLevel(4);
     store.selectHourMode('12h');
-    expect(store.get().editTarget).toBe('digital');
+    const valid = ['analog', 'digital', 'zin'];
+    expect(valid).toContain(store.get().editTarget);
     store.nextRound();
-    expect(store.get().editTarget).toBe('analog');
+    expect(valid).toContain(store.get().editTarget);
+  });
+
+  it('editTarget and refTarget are always different', () => {
+    const store = createGameStore();
+    for (const mode of ['analoog', 'digitaal', 'zin', 'beide']) {
+      store.selectMode(mode);
+      store.selectMinutesLevel(4);
+      store.selectHourMode('12h');
+      for (let i = 0; i < 5; i++) {
+        const { editTarget, refTarget } = store.get();
+        expect(editTarget).not.toBe(refTarget);
+        store.nextRound();
+      }
+    }
+  });
+
+  it('editTarget for zin mode is always zin', () => {
+    const store = createGameStore();
+    store.selectMode('zin');
+    store.selectMinutesLevel(4);
+    store.selectHourMode('12h');
+    expect(store.get().editTarget).toBe('zin');
+    store.nextRound();
+    expect(store.get().editTarget).toBe('zin');
+  });
+
+  it('refTarget for analoog mode is digital or zin', () => {
+    const store = createGameStore();
+    store.selectMode('analoog');
+    store.selectMinutesLevel(4);
+    store.selectHourMode('12h');
+    expect(['digital', 'zin']).toContain(store.get().refTarget);
+  });
+
+  it('refTarget for digitaal mode is analog or zin', () => {
+    const store = createGameStore();
+    store.selectMode('digitaal');
+    store.selectMinutesLevel(4);
+    store.selectHourMode('12h');
+    expect(['analog', 'zin']).toContain(store.get().refTarget);
+  });
+
+  it('refTarget for zin mode is analog or digital', () => {
+    const store = createGameStore();
+    store.selectMode('zin');
+    store.selectMinutesLevel(4);
+    store.selectHourMode('12h');
+    expect(['analog', 'digital']).toContain(store.get().refTarget);
+  });
+
+  it('zin mode: check marks correct when editTime matches referenceTime', () => {
+    const store = createGameStore();
+    store.selectMode('zin');
+    store.selectMinutesLevel(4);
+    store.selectHourMode('12h');
+    const { referenceTime } = store.get();
+    store.setEditTime(referenceTime);
+    store.check();
+    expect(store.get().checked).toBe(true);
+    expect(store.get().correct).toBe(true);
+  });
+
+  it('zin mode: check marks incorrect when editTime does not match referenceTime', () => {
+    const store = createGameStore();
+    store.selectMode('zin');
+    store.selectMinutesLevel(4);
+    store.selectHourMode('12h');
+    const { referenceTime } = store.get();
+    const refH = referenceTime.hours % 12;
+    const wrongTime = { hours: refH === 1 ? 2 : 1, minutes: referenceTime.minutes === 0 ? 5 : 0 };
+    store.setEditTime(wrongTime);
+    store.check();
+    expect(store.get().checked).toBe(true);
+    expect(store.get().correct).toBe(false);
   });
 });

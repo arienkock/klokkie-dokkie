@@ -2,12 +2,13 @@ import { createGameStore } from './store.js';
 import { MINUTE_LEVELS, HOUR_MODES, getDifficulty } from './difficulties.js';
 import { DigitalClock } from './components/DigitalClock.js';
 import { AnalogClock } from './components/AnalogClock.js';
+import { SentenceClock } from './components/SentenceClock.js';
 import { createElement } from './utils/dom.js';
 
 const store = createGameStore();
 const app = document.getElementById('app');
 
-let prevAnalog = null;
+let prevToDestroy = [];
 
 const btn = (label, cls, onClick) =>
   createElement('button', { class: cls, type: 'button', onClick }, label);
@@ -23,7 +24,7 @@ function renderModeSelect() {
   const el = createElement('section', { class: 'screen screen--center' });
   el.appendChild(createElement('h2', { class: 'screen-heading' }, 'Wat wil je oefenen?'));
   const group = createElement('div', { class: 'btn-group' });
-  for (const [label, value] of [['Analoog', 'analoog'], ['Digitaal', 'digitaal'], ['Beide', 'beide']]) {
+  for (const [label, value] of [['Analoog', 'analoog'], ['Digitaal', 'digitaal'], ['Zin', 'zin'], ['Beide', 'beide']]) {
     group.appendChild(btn(label, 'btn btn--choice', () => store.selectMode(value)));
   }
   el.appendChild(group);
@@ -63,38 +64,63 @@ function renderHourModeSelect() {
   return el;
 }
 
+const COMPONENT_LABELS = {
+  analog:  ['Analoge klok',  'Stel de analoge klok in ✎'],
+  digital: ['Digitale klok', 'Stel de digitale klok in ✎'],
+  zin:     ['Tijdszin',      'Vul de tijdszin in ✎'],
+};
+
 function renderGame(state) {
-  if (prevAnalog) { prevAnalog.destroy(); prevAnalog = null; }
+  prevToDestroy.forEach(c => c.destroy());
+  prevToDestroy = [];
 
-  const { editTarget, referenceTime, editTime, checked, correct, minutesLevel, hourMode } = state;
+  const { editTarget, refTarget, referenceTime, editTime, checked, correct, minutesLevel, hourMode } = state;
   const diff = getDifficulty(minutesLevel, hourMode);
-  const analogEditable  = editTarget === 'analog'  && !checked;
-  const digitalEditable = editTarget === 'digital' && !checked;
+  const isEditable = !checked;
 
-  const analog  = new AnalogClock({ showNumbers: true, editable: analogEditable, minuteEditable: diff.minuteHandFree });
-  const digital = new DigitalClock({ editable: digitalEditable });
-  prevAnalog = analog;
+  const makeComponent = (target, editable) => {
+    if (target === 'analog') {
+      const c = new AnalogClock({ showNumbers: true, editable, minuteEditable: diff.minuteHandFree });
+      prevToDestroy.push(c);
+      return c;
+    }
+    if (target === 'digital') return new DigitalClock({ editable });
+    return new SentenceClock({ editable });
+  };
 
-  analog.update( editTarget === 'analog'  ? editTime : referenceTime);
-  digital.update(editTarget === 'digital' ? editTime : referenceTime);
+  const editComp = makeComponent(editTarget, isEditable);
+  const refComp  = makeComponent(refTarget,  false);
 
-  if (analogEditable)  analog.onChange(t => store.setEditTime(t));
-  if (digitalEditable) digital.onChange(t => store.setEditTime(t));
+  const editDisplayTime = editTarget === 'zin' ? referenceTime : editTime;
+  editComp.update(editDisplayTime);
+  refComp.update(referenceTime);
 
-  const makeCell = (clock, label, isEdit) => {
+  if (isEditable) {
+    if (editTarget === 'zin') {
+      editComp.onChange(t => { store.setEditTime(t); store.check(); });
+    } else {
+      editComp.onChange(t => store.setEditTime(t));
+    }
+  }
+
+  const makeCell = (comp, target, isEdit) => {
+    const [readLabel, editLabel] = COMPONENT_LABELS[target];
+    const label = isEdit ? editLabel : readLabel;
     const cell = createElement('div', { class: 'clock-cell' + (isEdit ? ' clock-cell--edit' : '') });
     cell.appendChild(createElement('div', { class: 'clock-label' + (isEdit ? ' clock-label--edit' : '') }, label));
-    cell.appendChild(clock.el);
+    cell.appendChild(comp.el);
     return cell;
   };
 
   const grid = createElement('div', { class: 'clock-grid' });
-  grid.appendChild(makeCell(analog,  analogEditable  ? 'Stel de analoge klok in ✎'  : 'Analoge klok',  analogEditable));
-  grid.appendChild(makeCell(digital, digitalEditable ? 'Stel de digitale klok in ✎' : 'Digitale klok', digitalEditable));
+  grid.appendChild(makeCell(editComp, editTarget, true));
+  grid.appendChild(makeCell(refComp,  refTarget,  false));
 
   const footer = createElement('div', { class: 'game-footer' });
   if (!checked) {
-    footer.appendChild(btn('Controleer', 'btn btn--primary', () => store.check()));
+    if (editTarget !== 'zin') {
+      footer.appendChild(btn('Controleer', 'btn btn--primary', () => store.check()));
+    }
   } else {
     footer.appendChild(createElement('div', { class: 'feedback feedback--' + (correct ? 'correct' : 'wrong') },
       correct ? 'Goed zo! ✓' : 'Helaas, dat klopt niet.'));
