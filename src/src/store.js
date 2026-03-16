@@ -1,4 +1,4 @@
-import { randomTime, timesEqual } from './utils/time.js';
+import { randomTime, timesEqualAnalog } from './utils/time.js';
 
 export function createStore(initial) {
   let state = { ...initial };
@@ -61,7 +61,7 @@ export function createGameStore() {
     },
     check: () => {
       const { referenceTime, editTime } = store.get();
-      store.set({ checked: true, correct: timesEqual(referenceTime, editTime) });
+      store.set({ checked: true, correct: timesEqualAnalog(referenceTime, editTime) });
     },
     setEditTime: (time) => store.set({ editTime: time }),
   };

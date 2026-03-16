@@ -29,3 +29,6 @@ export const randomTime = () => ({
 });
 
 export const timesEqual = (a, b) => a.hours === b.hours && a.minutes === b.minutes;
+
+export const timesEqualAnalog = (a, b) =>
+  a.minutes === b.minutes && (a.hours % 12) === (b.hours % 12);
