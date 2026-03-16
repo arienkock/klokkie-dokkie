@@ -22,3 +22,10 @@ export const handEndpoint = (angleDeg, length, cx = 100, cy = 100) => {
   const rad = angleDeg * Math.PI / 180;
   return { x: cx + length * Math.sin(rad), y: cy - length * Math.cos(rad) };
 };
+
+export const randomTime = () => ({
+  hours: Math.floor(Math.random() * 24),
+  minutes: Math.floor(Math.random() * 60),
+});
+
+export const timesEqual = (a, b) => a.hours === b.hours && a.minutes === b.minutes;

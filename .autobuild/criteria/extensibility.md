@@ -1,5 +1,5 @@
 ---
-weight: 1.5
+weight: 0
 ---
 
 Given two implementations of the same feature (A and B), which is easier to

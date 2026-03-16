@@ -194,11 +194,207 @@ input[type="checkbox"] {
   line-height: 1;
 }
 
+/* Screens */
+.screen {
+  width: 100%;
+  max-width: 800px;
+}
+
+.screen--center {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  min-height: 60vh;
+  gap: var(--gap);
+}
+
+.screen--game {
+  display: flex;
+  flex-direction: column;
+  gap: var(--gap);
+}
+
+.game-title {
+  font-size: clamp(28px, 6vw, 48px);
+  font-weight: 300;
+  letter-spacing: -0.01em;
+  color: var(--color-text);
+}
+
+.screen-heading {
+  font-size: clamp(18px, 4vw, 28px);
+  font-weight: 400;
+  color: var(--color-text);
+}
+
+/* Buttons */
+.btn {
+  font-family: var(--font);
+  font-size: 14px;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  color: var(--color-surface);
+  background: var(--color-accent);
+  border: none;
+  border-radius: var(--radius);
+  padding: 10px 24px;
+  cursor: pointer;
+  transition: opacity 0.15s;
+  line-height: 1.4;
+}
+
+.btn:hover { opacity: 0.85; }
+.btn:active { opacity: 0.7; }
+
+.btn--lg {
+  font-size: 16px;
+  padding: 14px 40px;
+}
+
+.btn--choice {
+  background: var(--color-surface);
+  color: var(--color-text);
+  border: 1px solid var(--color-border);
+  font-size: 15px;
+  padding: 12px 28px;
+  min-width: 120px;
+}
+
+.btn--choice:hover {
+  background: var(--color-bg);
+  opacity: 1;
+  border-color: var(--color-accent);
+}
+
+.btn-group {
+  display: flex;
+  gap: 12px;
+  flex-wrap: wrap;
+  justify-content: center;
+}
+
+/* Clock cells */
+.clock-cell {
+  flex-direction: column;
+  gap: 12px;
+}
+
+.clock-cell--edit {
+  border-color: var(--color-accent);
+  border-width: 2px;
+}
+
+.clock-label {
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--color-text-muted);
+  align-self: flex-start;
+}
+
+.clock-label--edit {
+  color: var(--color-accent);
+}
+
+/* Game footer */
+.game-footer {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  justify-content: flex-end;
+}
+
+/* Feedback */
+.feedback {
+  font-size: 15px;
+  font-weight: 600;
+  padding: 8px 16px;
+  border-radius: var(--radius);
+}
+
+.feedback--correct {
+  background: #e8f5e9;
+  color: #2e7d32;
+}
+
+.feedback--wrong {
+  background: #fce4ec;
+  color: #c62828;
+}
+
+/* Editable digital clock */
+.digital-clock--editable {
+  padding: 8px 0;
+}
+
+.digit-row {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.digit-col {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+}
+
+.digit-btn {
+  font-family: var(--font);
+  font-size: 11px;
+  background: none;
+  border: 1px solid var(--color-border);
+  border-radius: 4px;
+  width: 32px;
+  height: 28px;
+  cursor: pointer;
+  color: var(--color-text-muted);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: background 0.1s, border-color 0.1s;
+}
+
+.digit-btn:hover {
+  background: var(--color-bg);
+  border-color: var(--color-accent);
+  color: var(--color-text);
+}
+
+.digit-val {
+  font-size: clamp(28px, 6vw, 48px);
+  font-weight: 300;
+  letter-spacing: 0.04em;
+  font-variant-numeric: tabular-nums;
+  min-width: 32px;
+  text-align: center;
+  line-height: 1;
+}
+
+.digit-sep {
+  font-size: clamp(28px, 6vw, 48px);
+  font-weight: 300;
+  line-height: 1;
+  color: var(--color-text-muted);
+  margin: 0 2px;
+  padding-bottom: 8px;
+}
+
 @media (max-width: 540px) {
   .clock-grid {
     grid-template-columns: 1fr;
   }
   .controls {
     flex-wrap: wrap;
+  }
+  .btn-group {
+    flex-direction: column;
+    align-items: stretch;
+  }
+  .btn--choice {
+    min-width: unset;
   }
 }

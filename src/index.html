@@ -1,36 +1,13 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="nl">
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Clock</title>
+  <title>Klok Oefenen</title>
   <link rel="stylesheet" href="/src/styles/main.css" />
 </head>
 <body>
-  <main class="app">
-    <h1 class="app-title">Clock</h1>
-
-    <div class="clock-grid">
-      <div class="clock-cell" id="analog-mount"></div>
-      <div class="clock-cell clock-cell--digital" id="digital-mount"></div>
-    </div>
-
-    <div class="controls">
-      <div class="field">
-        <label class="field-label" for="hours">Hours</label>
-        <input class="field-input" type="number" id="hours" min="0" max="23" value="10">
-      </div>
-      <div class="field">
-        <label class="field-label" for="minutes">Minutes</label>
-        <input class="field-input" type="text" inputmode="numeric" id="minutes" value="10">
-      </div>
-      <div class="field field--inline">
-        <label class="field-label" for="show-numbers">Numbers</label>
-        <input type="checkbox" id="show-numbers" checked>
-      </div>
-    </div>
-  </main>
-
+  <div id="app"></div>
   <script type="module" src="/src/main.js"></script>
 </body>
 </html>
