@@ -10,6 +10,8 @@ Implement a game loop. The page should have a "Start" button with nothing else. 
 
 After clicking it, the user will be shown (in a loop) pairs of a digital and an analog clock. Each time one of the two is editable, while the other is not. Which one needs to be edited should be clearly indicated. The goal is for the user to match the time that's on the other clock. The times should be randomized for each problem/round.
 
+Matching logic: since the digital clock is 24hrs and the analog clock only has 12, make sure that the judgement of whether they match or not takes that into account. The analog clock can mean two different times, and both should be considered before determoining if the answer is correct or not.
+
 For this to work well the digital clock component needs to be made editable. Add controls that allow the user to increase and decrease the individual digits of the hour and minutes of the digital clock.
 
 The main app lives on a single index page, but NO CLIENT SIDE ROUTING! The index.html should be easily servable via a static content server with no special SPA routing needed. Putting state in the querystring is allowed, but no path changes.
