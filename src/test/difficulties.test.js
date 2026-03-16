@@ -12,9 +12,20 @@ describe('MINUTE_LEVELS', () => {
       expect(typeof d.label).toBe('string');
       expect(typeof d.sublabel).toBe('string');
       expect(typeof d.minuteHandFree).toBe('boolean');
+      expect(typeof d.minuteSnap).toBe('number');
       expect(typeof d.initialEditTime).toBe('object');
       expect(typeof d.randomMinutes).toBe('function');
     }
+  });
+
+  it('levels 2 and 3 have minuteSnap of 5', () => {
+    expect(getMinuteLevel(2).minuteSnap).toBe(5);
+    expect(getMinuteLevel(3).minuteSnap).toBe(5);
+  });
+
+  it('levels 1 and 4 have minuteSnap of 1', () => {
+    expect(getMinuteLevel(1).minuteSnap).toBe(1);
+    expect(getMinuteLevel(4).minuteSnap).toBe(1);
   });
 
   it('ids are 1 through 4', () => {
@@ -88,11 +99,20 @@ describe('HOUR_MODES', () => {
 });
 
 describe('getDifficulty', () => {
-  it('returns object with minuteHandFree, initialEditTime, randomTime', () => {
+  it('returns object with minuteHandFree, minuteSnap, initialEditTime, randomTime', () => {
     const diff = getDifficulty(1, '12h');
     expect(typeof diff.minuteHandFree).toBe('boolean');
+    expect(typeof diff.minuteSnap).toBe('number');
     expect(typeof diff.initialEditTime).toBe('object');
     expect(typeof diff.randomTime).toBe('function');
+  });
+
+  it('level 3 getDifficulty exposes minuteSnap 5', () => {
+    expect(getDifficulty(3, '12h').minuteSnap).toBe(5);
+  });
+
+  it('level 4 getDifficulty exposes minuteSnap 1', () => {
+    expect(getDifficulty(4, '12h').minuteSnap).toBe(1);
   });
 
   it('level 1 + 12h: randomTime returns hours 1-12 and minutes 0', () => {

@@ -80,7 +80,7 @@ function renderGame(state) {
 
   const makeComponent = (target, editable) => {
     if (target === 'analog') {
-      const c = new AnalogClock({ showNumbers: true, editable, minuteEditable: diff.minuteHandFree });
+      const c = new AnalogClock({ showNumbers: true, editable, minuteEditable: diff.minuteHandFree, snapMinutes: diff.minuteSnap });
       prevToDestroy.push(c);
       return c;
     }

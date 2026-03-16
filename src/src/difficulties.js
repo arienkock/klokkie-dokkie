@@ -8,6 +8,7 @@ export const MINUTE_LEVELS = [
     label: 'Volle uren',
     sublabel: 'Alleen hele uren',
     minuteHandFree: false,
+    minuteSnap: 1,
     initialEditTime: { hours: 1, minutes: 0 },
     randomMinutes: () => 0,
   },
@@ -16,6 +17,7 @@ export const MINUTE_LEVELS = [
     label: 'Tot half',
     sublabel: 'Veelvouden van 5, tot en met half',
     minuteHandFree: true,
+    minuteSnap: 5,
     initialEditTime: { hours: 12, minutes: 0 },
     randomMinutes: () => randomMultipleOf5(30),
   },
@@ -24,6 +26,7 @@ export const MINUTE_LEVELS = [
     label: 'Vijf minuten',
     sublabel: 'Veelvouden van 5 minuten',
     minuteHandFree: true,
+    minuteSnap: 5,
     initialEditTime: { hours: 12, minutes: 0 },
     randomMinutes: () => randomMultipleOf5(55),
   },
@@ -32,6 +35,7 @@ export const MINUTE_LEVELS = [
     label: 'Vrij',
     sublabel: 'Alle minuten',
     minuteHandFree: true,
+    minuteSnap: 1,
     initialEditTime: { hours: 12, minutes: 0 },
     randomMinutes: () => Math.floor(Math.random() * 60),
   },
@@ -60,6 +64,7 @@ export const getDifficulty = (minuteLevelId, hourModeId) => {
   const hm = getHourMode(hourModeId);
   return {
     minuteHandFree: ml.minuteHandFree,
+    minuteSnap: ml.minuteSnap,
     initialEditTime: ml.initialEditTime,
     randomTime: () => ({ hours: hm.randomHour(), minutes: ml.randomMinutes() }),
   };

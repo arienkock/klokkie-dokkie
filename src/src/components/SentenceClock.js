@@ -1,5 +1,8 @@
 import { timeToZin, zinToWords, generateTray } from '../utils/zinnen.js';
 
+const DOUBLE_TAP_MS = 300;
+const DRAG_THRESHOLD = 5;
+
 export class SentenceClock {
   constructor({ editable = false } = {}) {
     this._editable = editable;
@@ -9,7 +12,6 @@ export class SentenceClock {
     this._correctWords = [];
     this._trayPool = [];
     this._placed = [];
-    this._dragging = null;
     this.el = document.createElement('div');
     this.el.className = 'sentence-clock' + (editable ? ' sentence-clock--editable' : '');
   }
@@ -71,6 +73,99 @@ export class SentenceClock {
     }, 600);
   }
 
+  _hitTest(x, y) {
+    for (const el of document.elementsFromPoint(x, y)) {
+      if (el.classList.contains('word-slot')) return el;
+      if (el.classList.contains('word-tray')) return el;
+    }
+    return null;
+  }
+
+  _bindInteraction(el, item, fromSlot) {
+    let lastTap = 0;
+
+    el.addEventListener('pointerdown', e => {
+      e.preventDefault();
+      const now = Date.now();
+      if (now - lastTap < DOUBLE_TAP_MS) {
+        lastTap = 0;
+        if (fromSlot !== null) this._removeFromSlot(fromSlot);
+        else this._placeInFirstEmpty(item, null);
+        return;
+      }
+      lastTap = now;
+
+      const rect = el.getBoundingClientRect();
+      const ox = e.clientX - rect.left;
+      const oy = e.clientY - rect.top;
+      const startX = e.clientX;
+      const startY = e.clientY;
+      let ghost = null;
+      let dragging = false;
+
+      const startGhost = (cx, cy) => {
+        dragging = true;
+        ghost = el.cloneNode(true);
+        ghost.className = ghost.className + ' word-ghost';
+        ghost.style.cssText = [
+          'position:fixed',
+          'pointer-events:none',
+          'z-index:9999',
+          `left:${cx - ox}px`,
+          `top:${cy - oy}px`,
+          `width:${rect.width}px`,
+          'margin:0',
+          'opacity:0.85',
+        ].join(';');
+        document.body.appendChild(ghost);
+        el.classList.add('dragging');
+      };
+
+      const clearHighlights = () =>
+        this.el.querySelectorAll('.drag-over').forEach(t => t.classList.remove('drag-over'));
+
+      const onMove = ev => {
+        if (!dragging) {
+          if (Math.hypot(ev.clientX - startX, ev.clientY - startY) > DRAG_THRESHOLD) {
+            startGhost(ev.clientX, ev.clientY);
+          }
+          return;
+        }
+        ghost.style.left = `${ev.clientX - ox}px`;
+        ghost.style.top = `${ev.clientY - oy}px`;
+        clearHighlights();
+        const target = this._hitTest(ev.clientX, ev.clientY);
+        if (target) target.classList.add('drag-over');
+      };
+
+      const cleanup = () => {
+        document.removeEventListener('pointermove', onMove);
+        document.removeEventListener('pointerup', onEnd);
+        document.removeEventListener('pointercancel', onEnd);
+        ghost?.remove();
+        el.classList.remove('dragging');
+        clearHighlights();
+      };
+
+      const onEnd = ev => {
+        cleanup();
+        if (!dragging) return;
+        const target = this._hitTest(ev.clientX, ev.clientY);
+        if (!target) return;
+        if (target.classList.contains('word-tray')) {
+          if (fromSlot !== null) this._removeFromSlot(fromSlot);
+        } else if (target.classList.contains('word-slot')) {
+          const idx = parseInt(target.dataset.slot, 10);
+          this._placeInSlot(idx, item, fromSlot);
+        }
+      };
+
+      document.addEventListener('pointermove', onMove);
+      document.addEventListener('pointerup', onEnd);
+      document.addEventListener('pointercancel', onEnd);
+    });
+  }
+
   _render() {
     this.el.innerHTML = '';
     if (!this._editable) {
@@ -87,58 +182,24 @@ export class SentenceClock {
     this._placed.forEach((placed, i) => {
       const slot = document.createElement('div');
       slot.className = 'word-slot' + (placed ? ' word-slot--filled' : '');
+      slot.dataset.slot = String(i);
 
       if (placed) {
         slot.textContent = placed.word;
-        slot.draggable = true;
-        slot.addEventListener('dragstart', e => {
-          this._dragging = { item: placed, fromSlot: i };
-          e.dataTransfer.effectAllowed = 'move';
-          e.dataTransfer.setData('text/plain', '');
-          requestAnimationFrame(() => slot.classList.add('dragging'));
-        });
-        slot.addEventListener('dragend', () => slot.classList.remove('dragging'));
-        slot.addEventListener('dblclick', () => this._removeFromSlot(i));
+        this._bindInteraction(slot, placed, i);
       }
-
-      slot.addEventListener('dragover', e => { e.preventDefault(); slot.classList.add('drag-over'); });
-      slot.addEventListener('dragleave', () => slot.classList.remove('drag-over'));
-      slot.addEventListener('drop', e => {
-        e.preventDefault();
-        slot.classList.remove('drag-over');
-        if (!this._dragging) return;
-        const { item, fromSlot } = this._dragging;
-        this._dragging = null;
-        this._placeInSlot(i, item, fromSlot);
-      });
 
       slotsEl.appendChild(slot);
     });
 
     const trayEl = document.createElement('div');
     trayEl.className = 'word-tray';
-    trayEl.addEventListener('dragover', e => e.preventDefault());
-    trayEl.addEventListener('drop', e => {
-      e.preventDefault();
-      if (!this._dragging) return;
-      const { fromSlot } = this._dragging;
-      this._dragging = null;
-      if (fromSlot !== null) this._removeFromSlot(fromSlot);
-    });
 
     this._trayItems().forEach(item => {
       const block = document.createElement('div');
       block.className = 'word-block';
       block.textContent = item.word;
-      block.draggable = true;
-      block.addEventListener('dragstart', e => {
-        this._dragging = { item, fromSlot: null };
-        e.dataTransfer.effectAllowed = 'move';
-        e.dataTransfer.setData('text/plain', '');
-        requestAnimationFrame(() => block.classList.add('dragging'));
-      });
-      block.addEventListener('dragend', () => block.classList.remove('dragging'));
-      block.addEventListener('dblclick', () => this._placeInFirstEmpty(item, null));
+      this._bindInteraction(block, item, null);
       trayEl.appendChild(block);
     });
 

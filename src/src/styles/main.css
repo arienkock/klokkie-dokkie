@@ -122,6 +122,7 @@ input[type="checkbox"] {
   max-width: 200px;
   display: block;
   user-select: none;
+  touch-action: none;
 }
 
 .clock-face {
@@ -543,6 +544,7 @@ input[type="checkbox"] {
   border-style: solid;
   border-color: var(--color-border);
   cursor: grab;
+  touch-action: none;
 }
 
 .word-slot--filled:active,
@@ -587,6 +589,7 @@ input[type="checkbox"] {
   color: var(--color-text);
   cursor: grab;
   user-select: none;
+  touch-action: none;
   transition: border-color 0.12s;
 }
 
@@ -597,6 +600,12 @@ input[type="checkbox"] {
 .word-block.dragging {
   opacity: 0.4;
   cursor: grabbing;
+}
+
+.word-ghost {
+  pointer-events: none;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+  transform: rotate(2deg);
 }
 
 @media (max-width: 540px) {

@@ -1,7 +1,7 @@
 import {
   hoursToAngle, minutesToAngle,
   angleToMinutes, angleToHours12,
-  pointAngle, svgPoint, handEndpoint,
+  pointAngle, svgPoint, handEndpoint, snapTo,
 } from '../utils/time.js';
 
 const NS = 'http://www.w3.org/2000/svg';
@@ -20,10 +20,11 @@ const setLine = (line, angleDeg, length) => {
 };
 
 export class AnalogClock {
-  constructor({ showNumbers = true, editable = true, minuteEditable = true } = {}) {
+  constructor({ showNumbers = true, editable = true, minuteEditable = true, snapMinutes = 1 } = {}) {
     this._showNumbers = showNumbers;
     this._editable = editable;
     this._minuteEditable = editable && minuteEditable;
+    this._snapMinutes = snapMinutes;
     this._hours = 0;
     this._minutes = 0;
     this._dragging = null;
@@ -120,30 +121,27 @@ export class AnalogClock {
 
   onChange(fn) { this._handler = fn; }
 
-  destroy() {
-    document.removeEventListener('mousemove', this._onMove);
-    document.removeEventListener('touchmove', this._onTouchMove);
-    document.removeEventListener('mouseup', this._onEnd);
-    document.removeEventListener('touchend', this._onEnd);
-  }
+  destroy() {}
 
   _bindDrag() {
-    const onStart = (clientX, clientY, target) => {
-      if (!this._editable) return;
-      const hand = target.closest?.('[data-hand]') ?? (target.hasAttribute?.('data-hand') ? target : null);
+    if (!this._editable) return;
+
+    this.el.addEventListener('pointerdown', e => {
+      const hand = e.target.closest?.('[data-hand]') ?? (e.target.hasAttribute?.('data-hand') ? e.target : null);
       if (!hand) return;
       const handType = hand.getAttribute('data-hand');
       if (handType === 'minute' && !this._minuteEditable) return;
       this._dragging = handType;
-    };
+      this.el.setPointerCapture(e.pointerId);
+    });
 
-    const onCoords = (clientX, clientY) => {
+    this.el.addEventListener('pointermove', e => {
       if (!this._dragging) return;
-      const pt = svgPoint(this.el, clientX, clientY);
+      const pt = svgPoint(this.el, e.clientX, e.clientY);
       const angle = pointAngle(CX, CY, pt.x, pt.y);
       if (this._dragging === 'minute') {
         const prev = this._minutes;
-        this._minutes = angleToMinutes(angle);
+        this._minutes = snapTo(angleToMinutes(angle), this._snapMinutes);
         if (prev > 45 && this._minutes < 15) {
           this._hours = (this._hours + 1) % 24;
         } else if (prev < 15 && this._minutes > 45) {
@@ -155,17 +153,10 @@ export class AnalogClock {
       }
       this._renderHands();
       this._handler?.({ hours: this._hours, minutes: this._minutes });
-    };
+    });
 
-    this._onMove     = e => onCoords(e.clientX, e.clientY);
-    this._onTouchMove = e => onCoords(e.touches[0].clientX, e.touches[0].clientY);
-    this._onEnd      = () => { this._dragging = null; };
-
-    this.el.addEventListener('mousedown',  e => onStart(e.clientX, e.clientY, e.target));
-    this.el.addEventListener('touchstart', e => { onStart(e.touches[0].clientX, e.touches[0].clientY, e.target); e.preventDefault(); }, { passive: false });
-    document.addEventListener('mousemove',  this._onMove);
-    document.addEventListener('touchmove',  this._onTouchMove);
-    document.addEventListener('mouseup',   this._onEnd);
-    document.addEventListener('touchend',  this._onEnd);
+    const endDrag = () => { this._dragging = null; };
+    this.el.addEventListener('pointerup', endDrag);
+    this.el.addEventListener('pointercancel', endDrag);
   }
 }
