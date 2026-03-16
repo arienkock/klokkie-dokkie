@@ -1,5 +1,5 @@
 import { createGameStore } from './store.js';
-import { DIFFICULTIES, getDifficulty } from './difficulties.js';
+import { MINUTE_LEVELS, HOUR_MODES, getDifficulty } from './difficulties.js';
 import { DigitalClock } from './components/DigitalClock.js';
 import { AnalogClock } from './components/AnalogClock.js';
 import { createElement } from './utils/dom.js';
@@ -31,14 +31,15 @@ function renderModeSelect() {
   return el;
 }
 
-function renderDifficultySelect() {
+function renderMinutesSelect() {
   const el = createElement('section', { class: 'screen screen--center' });
+  el.appendChild(createElement('p', { class: 'select-step' }, 'Stap 1 van 2 — Minuten'));
   el.appendChild(createElement('h2', { class: 'screen-heading' }, 'Kies een niveau'));
   const grid = createElement('div', { class: 'difficulty-grid' });
-  for (const diff of DIFFICULTIES) {
-    const card = createElement('button', { class: 'btn btn--difficulty', type: 'button', onClick: () => store.selectDifficulty(diff.id) });
-    card.appendChild(createElement('span', { class: 'difficulty-label' }, diff.label));
-    card.appendChild(createElement('span', { class: 'difficulty-sub' }, diff.sublabel));
+  for (const level of MINUTE_LEVELS) {
+    const card = createElement('button', { class: 'btn btn--difficulty', type: 'button', onClick: () => store.selectMinutesLevel(level.id) });
+    card.appendChild(createElement('span', { class: 'difficulty-label' }, level.label));
+    card.appendChild(createElement('span', { class: 'difficulty-sub' }, level.sublabel));
     grid.appendChild(card);
   }
   el.appendChild(grid);
@@ -46,11 +47,27 @@ function renderDifficultySelect() {
   return el;
 }
 
+function renderHourModeSelect() {
+  const el = createElement('section', { class: 'screen screen--center' });
+  el.appendChild(createElement('p', { class: 'select-step' }, 'Stap 2 van 2 — Uren'));
+  el.appendChild(createElement('h2', { class: 'screen-heading' }, 'Kies een urennotatie'));
+  const group = createElement('div', { class: 'hour-mode-group' });
+  for (const mode of HOUR_MODES) {
+    const card = createElement('button', { class: 'btn btn--hour-mode', type: 'button', onClick: () => store.selectHourMode(mode.id) });
+    card.appendChild(createElement('span', { class: 'hour-mode-label' }, mode.label));
+    card.appendChild(createElement('span', { class: 'hour-mode-sub' }, mode.sublabel));
+    group.appendChild(card);
+  }
+  el.appendChild(group);
+  el.appendChild(btn('← Terug', 'btn btn--ghost', () => store.goToMinutesSelect()));
+  return el;
+}
+
 function renderGame(state) {
   if (prevAnalog) { prevAnalog.destroy(); prevAnalog = null; }
 
-  const { editTarget, referenceTime, editTime, checked, correct, difficulty } = state;
-  const diff = getDifficulty(difficulty);
+  const { editTarget, referenceTime, editTime, checked, correct, minutesLevel, hourMode } = state;
+  const diff = getDifficulty(minutesLevel, hourMode);
   const analogEditable  = editTarget === 'analog'  && !checked;
   const digitalEditable = editTarget === 'digital' && !checked;
 
@@ -97,10 +114,11 @@ store.subscribe(state => {
   if (key === lastKey) return;
   lastKey = key;
   app.innerHTML = '';
-  if      (state.screen === 'start')              app.appendChild(renderStart());
-  else if (state.screen === 'mode-select')        app.appendChild(renderModeSelect());
-  else if (state.screen === 'difficulty-select')  app.appendChild(renderDifficultySelect());
-  else if (state.screen === 'game')               app.appendChild(renderGame(state));
+  if      (state.screen === 'start')            app.appendChild(renderStart());
+  else if (state.screen === 'mode-select')      app.appendChild(renderModeSelect());
+  else if (state.screen === 'minutes-select')   app.appendChild(renderMinutesSelect());
+  else if (state.screen === 'hour-mode-select') app.appendChild(renderHourModeSelect());
+  else if (state.screen === 'game')             app.appendChild(renderGame(state));
 });
 
 const init = store.get();

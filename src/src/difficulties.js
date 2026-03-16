@@ -1,15 +1,15 @@
-const randomHour = () => Math.floor(Math.random() * 12) + 1;
-
+const randomHour12 = () => Math.floor(Math.random() * 12) + 1;
+const randomHour24 = () => Math.floor(Math.random() * 23) + 1;
 const randomMultipleOf5 = (max) => Math.floor(Math.random() * (max / 5 + 1)) * 5;
 
-export const DIFFICULTIES = [
+export const MINUTE_LEVELS = [
   {
     id: 1,
     label: 'Volle uren',
     sublabel: 'Alleen hele uren',
     minuteHandFree: false,
     initialEditTime: { hours: 1, minutes: 0 },
-    randomTime: () => ({ hours: randomHour(), minutes: 0 }),
+    randomMinutes: () => 0,
   },
   {
     id: 2,
@@ -17,7 +17,7 @@ export const DIFFICULTIES = [
     sublabel: 'Veelvouden van 5, tot en met half',
     minuteHandFree: true,
     initialEditTime: { hours: 12, minutes: 0 },
-    randomTime: () => ({ hours: randomHour(), minutes: randomMultipleOf5(30) }),
+    randomMinutes: () => randomMultipleOf5(30),
   },
   {
     id: 3,
@@ -25,7 +25,7 @@ export const DIFFICULTIES = [
     sublabel: 'Veelvouden van 5 minuten',
     minuteHandFree: true,
     initialEditTime: { hours: 12, minutes: 0 },
-    randomTime: () => ({ hours: randomHour(), minutes: randomMultipleOf5(55) }),
+    randomMinutes: () => randomMultipleOf5(55),
   },
   {
     id: 4,
@@ -33,8 +33,34 @@ export const DIFFICULTIES = [
     sublabel: 'Alle minuten',
     minuteHandFree: true,
     initialEditTime: { hours: 12, minutes: 0 },
-    randomTime: () => ({ hours: Math.floor(Math.random() * 24), minutes: Math.floor(Math.random() * 60) }),
+    randomMinutes: () => Math.floor(Math.random() * 60),
   },
 ];
 
-export const getDifficulty = (id) => DIFFICULTIES.find(d => d.id === id);
+export const HOUR_MODES = [
+  {
+    id: '12h',
+    label: '12-uurs',
+    sublabel: 'Uren van 1 tot 12',
+    randomHour: randomHour12,
+  },
+  {
+    id: '24h',
+    label: '24-uurs',
+    sublabel: 'Uren van 1 tot 23',
+    randomHour: randomHour24,
+  },
+];
+
+export const getMinuteLevel = (id) => MINUTE_LEVELS.find(l => l.id === id);
+export const getHourMode = (id) => HOUR_MODES.find(m => m.id === id);
+
+export const getDifficulty = (minuteLevelId, hourModeId) => {
+  const ml = getMinuteLevel(minuteLevelId);
+  const hm = getHourMode(hourModeId);
+  return {
+    minuteHandFree: ml.minuteHandFree,
+    initialEditTime: ml.initialEditTime,
+    randomTime: () => ({ hours: hm.randomHour(), minutes: ml.randomMinutes() }),
+  };
+};

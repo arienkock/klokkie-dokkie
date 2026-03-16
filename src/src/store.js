@@ -23,8 +23,8 @@ const editTargetForMode = (mode, roundIndex) =>
   : mode === 'digitaal' ? 'digital'
   : roundIndex % 2 === 0 ? 'digital' : 'analog';
 
-const freshRound = (mode, roundIndex, difficultyId) => {
-  const diff = getDifficulty(difficultyId);
+const freshRound = (mode, roundIndex, minutesLevel, hourMode) => {
+  const diff = getDifficulty(minutesLevel, hourMode);
   return {
     referenceTime: diff.randomTime(),
     editTime: { ...diff.initialEditTime },
@@ -38,7 +38,8 @@ export function createGameStore() {
   const store = createStore({
     screen: 'start',
     mode: null,
-    difficulty: null,
+    minutesLevel: null,
+    hourMode: null,
     roundIndex: 0,
     editTarget: 'digital',
     referenceTime: { hours: 12, minutes: 0 },
@@ -52,16 +53,17 @@ export function createGameStore() {
     subscribe: store.subscribe,
     goToStart: () => store.set({ screen: 'start' }),
     goToModeSelect: () => store.set({ screen: 'mode-select' }),
-    goToDifficultySelect: () => store.set({ screen: 'difficulty-select' }),
-    selectMode: (mode) => store.set({ mode, screen: 'difficulty-select' }),
-    selectDifficulty: (difficultyId) => {
-      const { mode } = store.get();
-      store.set({ difficulty: difficultyId, screen: 'game', roundIndex: 0, ...freshRound(mode, 0, difficultyId) });
+    goToMinutesSelect: () => store.set({ screen: 'minutes-select' }),
+    selectMode: (mode) => store.set({ mode, screen: 'minutes-select' }),
+    selectMinutesLevel: (minutesLevel) => store.set({ minutesLevel, screen: 'hour-mode-select' }),
+    selectHourMode: (hourMode) => {
+      const { mode, minutesLevel } = store.get();
+      store.set({ hourMode, screen: 'game', roundIndex: 0, ...freshRound(mode, 0, minutesLevel, hourMode) });
     },
     nextRound: () => {
-      const { mode, roundIndex, difficulty } = store.get();
+      const { mode, roundIndex, minutesLevel, hourMode } = store.get();
       const next = roundIndex + 1;
-      store.set({ roundIndex: next, ...freshRound(mode, next, difficulty) });
+      store.set({ roundIndex: next, ...freshRound(mode, next, minutesLevel, hourMode) });
     },
     check: () => {
       const { referenceTime, editTime } = store.get();
