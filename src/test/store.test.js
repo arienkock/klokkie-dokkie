@@ -1,5 +1,5 @@
-import { describe, it, expect } from 'vitest';
-import { createStore, createGameStore } from '../src/store.js';
+import { describe, it, expect, beforeEach } from 'vitest';
+import { createStore, createGameStore, gameKey, getOptionStatus } from '../src/store.js';
 
 describe('createStore', () => {
   it('returns initial state via get()', () => {
@@ -40,14 +40,63 @@ describe('createStore', () => {
   });
 });
 
+describe('gameKey', () => {
+  it('produces a string key from mode, level, hourMode', () => {
+    expect(gameKey('analoog', 1, '12h')).toBe('analoog-1-12h');
+    expect(gameKey('beide', 4, '24h')).toBe('beide-4-24h');
+  });
+});
+
+describe('getOptionStatus', () => {
+  it('returns null when no scores exist for mode', () => {
+    expect(getOptionStatus({}, 'analoog')).toBeNull();
+  });
+
+  it('returns completed=true if any config for that mode is completed', () => {
+    const scores = { 'analoog-1-12h': { completed: true, percentage: 95 } };
+    const status = getOptionStatus(scores, 'analoog');
+    expect(status.completed).toBe(true);
+    expect(status.percentage).toBe(95);
+  });
+
+  it('returns completed=false if no config completed', () => {
+    const scores = { 'analoog-2-12h': { completed: false, percentage: 70 } };
+    const status = getOptionStatus(scores, 'analoog');
+    expect(status.completed).toBe(false);
+    expect(status.percentage).toBe(70);
+  });
+
+  it('filters by level when provided', () => {
+    const scores = {
+      'analoog-1-12h': { completed: true, percentage: 95 },
+      'analoog-2-12h': { completed: false, percentage: 60 },
+    };
+    const status = getOptionStatus(scores, 'analoog', 2);
+    expect(status.completed).toBe(false);
+    expect(status.percentage).toBe(60);
+  });
+
+  it('returns exact entry when mode+level+hourMode provided', () => {
+    const scores = { 'digitaal-3-24h': { completed: false, percentage: 50 } };
+    const status = getOptionStatus(scores, 'digitaal', 3, '24h');
+    expect(status.completed).toBe(false);
+    expect(status.percentage).toBe(50);
+  });
+});
+
 describe('createGameStore', () => {
-  it('starts on start screen', () => {
+  beforeEach(() => {
+    localStorage.clear();
+  });
+
+  it('starts on mode-select screen', () => {
     const store = createGameStore();
-    expect(store.get().screen).toBe('start');
+    expect(store.get().screen).toBe('mode-select');
   });
 
   it('goToModeSelect changes screen', () => {
     const store = createGameStore();
+    store.selectMode('analoog');
     store.goToModeSelect();
     expect(store.get().screen).toBe('mode-select');
   });
@@ -79,6 +128,7 @@ describe('createGameStore', () => {
     expect(state.minutesLevel).toBe(1);
     expect(state.hourMode).toBe('12h');
     expect(state.roundIndex).toBe(0);
+    expect(state.sessionHistory).toEqual([]);
   });
 
   it('level 1 game starts with editTime 01:00', () => {
@@ -156,6 +206,76 @@ describe('createGameStore', () => {
     store.check();
     expect(store.get().checked).toBe(true);
     expect(store.get().correct).toBe(false);
+  });
+
+  it('check records answer in sessionHistory', () => {
+    const store = createGameStore();
+    store.selectMode('analoog');
+    store.selectMinutesLevel(4);
+    store.selectHourMode('12h');
+    const { referenceTime } = store.get();
+    store.setEditTime(referenceTime);
+    store.check();
+    expect(store.get().sessionHistory).toEqual([true]);
+  });
+
+  it('check updates scores with percentage', () => {
+    const store = createGameStore();
+    store.selectMode('analoog');
+    store.selectMinutesLevel(1);
+    store.selectHourMode('12h');
+    const { referenceTime } = store.get();
+    store.setEditTime(referenceTime);
+    store.check();
+    const { scores, currentGameKey } = store.get();
+    expect(scores[currentGameKey]).toBeDefined();
+    expect(scores[currentGameKey].percentage).toBe(100);
+  });
+
+  it('game completes after 20 answers with 90%+ correct', () => {
+    const store = createGameStore();
+    store.selectMode('analoog');
+    store.selectMinutesLevel(1);
+    store.selectHourMode('12h');
+
+    for (let i = 0; i < 20; i++) {
+      const { referenceTime } = store.get();
+      store.setEditTime(referenceTime);
+      store.check();
+      if (store.get().screen !== 'game-complete') store.nextRound();
+    }
+    expect(store.get().screen).toBe('game-complete');
+  });
+
+  it('game does not complete with fewer than 20 answers', () => {
+    const store = createGameStore();
+    store.selectMode('analoog');
+    store.selectMinutesLevel(1);
+    store.selectHourMode('12h');
+
+    for (let i = 0; i < 19; i++) {
+      const { referenceTime } = store.get();
+      store.setEditTime(referenceTime);
+      store.check();
+      store.nextRound();
+    }
+    expect(store.get().screen).toBe('game');
+  });
+
+  it('completed game persists completed=true in scores', () => {
+    const store = createGameStore();
+    store.selectMode('analoog');
+    store.selectMinutesLevel(1);
+    store.selectHourMode('12h');
+
+    for (let i = 0; i < 20; i++) {
+      const { referenceTime } = store.get();
+      store.setEditTime(referenceTime);
+      store.check();
+      if (store.get().screen !== 'game-complete') store.nextRound();
+    }
+    const { scores, currentGameKey } = store.get();
+    expect(scores[currentGameKey].completed).toBe(true);
   });
 
   it('goToMinutesSelect changes screen', () => {

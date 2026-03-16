@@ -195,6 +195,25 @@ input[type="checkbox"] {
   line-height: 1;
 }
 
+/* Navigation */
+.app-nav {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding-bottom: 16px;
+  border-bottom: 1px solid var(--color-border);
+  margin-bottom: 8px;
+}
+
+.app-nav__title {
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--color-text-muted);
+}
+
 /* Screens */
 .screen {
   width: 100%;
@@ -260,12 +279,38 @@ input[type="checkbox"] {
   font-size: 15px;
   padding: 12px 28px;
   min-width: 120px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
 }
 
 .btn--choice:hover {
   background: var(--color-bg);
   opacity: 1;
   border-color: var(--color-accent);
+}
+
+.btn--completed {
+  border-color: #2e7d32 !important;
+  color: #2e7d32 !important;
+}
+
+.btn--progress {
+  border-color: #e65100 !important;
+  color: #e65100 !important;
+}
+
+.score-badge {
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  opacity: 0.85;
+}
+
+.choice-label {
+  font-size: inherit;
+  font-weight: 600;
 }
 
 .btn-group {
@@ -297,6 +342,22 @@ input[type="checkbox"] {
 
 .clock-label--edit {
   color: var(--color-accent);
+}
+
+/* Game header */
+.game-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding-bottom: 12px;
+  border-bottom: 1px solid var(--color-border);
+}
+
+.game-score {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--color-text-muted);
+  letter-spacing: 0.04em;
 }
 
 /* Game footer */
@@ -405,6 +466,7 @@ input[type="checkbox"] {
   text-align: left;
   font-family: var(--font);
   transition: border-color 0.15s, background 0.15s;
+  color: var(--color-text);
 }
 
 .btn--difficulty:hover {
@@ -415,12 +477,12 @@ input[type="checkbox"] {
 .difficulty-label {
   font-size: 15px;
   font-weight: 600;
-  color: var(--color-text);
 }
 
 .difficulty-sub {
   font-size: 12px;
   color: var(--color-text-muted);
+  font-weight: 400;
 }
 
 .btn--ghost {
@@ -471,6 +533,7 @@ input[type="checkbox"] {
   flex: 1;
   min-width: 140px;
   max-width: 220px;
+  color: var(--color-text);
 }
 
 .btn--hour-mode:hover {
@@ -481,11 +544,32 @@ input[type="checkbox"] {
 .hour-mode-label {
   font-size: 15px;
   font-weight: 600;
-  color: var(--color-text);
 }
 
 .hour-mode-sub {
   font-size: 12px;
+  color: var(--color-text-muted);
+  font-weight: 400;
+}
+
+/* Game complete screen */
+.screen--complete {
+  text-align: center;
+}
+
+.complete-icon {
+  font-size: 56px;
+  line-height: 1;
+}
+
+.complete-message {
+  font-size: 16px;
+  color: var(--color-text);
+  max-width: 360px;
+}
+
+.complete-sub {
+  font-size: 14px;
   color: var(--color-text-muted);
 }
 

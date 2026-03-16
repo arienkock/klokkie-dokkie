@@ -1,4 +1,4 @@
-import { getDifficulty } from './difficulties.js';
+import { getDifficulty, MINUTE_LEVELS, HOUR_MODES } from './difficulties.js';
 import { timesEqualAnalog } from './utils/time.js';
 
 export function createStore(initial) {
@@ -18,18 +18,41 @@ export function createStore(initial) {
   };
 }
 
+const LS_KEY = 'klok-oefenen-scores';
+
+const loadScores = () => {
+  try { return JSON.parse(localStorage.getItem(LS_KEY) || '{}'); }
+  catch { return {}; }
+};
+
+const saveScores = (scores) => {
+  try { localStorage.setItem(LS_KEY, JSON.stringify(scores)); }
+  catch {}
+};
+
+export const gameKey = (mode, minutesLevel, hourMode) => `${mode}-${minutesLevel}-${hourMode}`;
+
+export const getOptionStatus = (scores, mode, minutesLevel = null, hourMode = null) => {
+  const levels = minutesLevel !== null ? [minutesLevel] : MINUTE_LEVELS.map(l => l.id);
+  const hours  = hourMode   !== null ? [hourMode]   : HOUR_MODES.map(m => m.id);
+  const entries = levels.flatMap(l => hours.map(h => scores[gameKey(mode, l, h)])).filter(Boolean);
+  if (!entries.length) return null;
+  return {
+    completed:  entries.some(e => e.completed),
+    percentage: Math.max(...entries.map(e => e.percentage)),
+  };
+};
+
 const pick = arr => arr[Math.floor(Math.random() * arr.length)];
 
 const PAIRINGS = [['analog', 'digital'], ['analog', 'zin'], ['digital', 'zin']];
 
 const freshTargets = (mode) => {
-  if (mode === 'analoog') return { editTarget: 'analog',   refTarget: pick(['digital', 'zin']) };
-  if (mode === 'digitaal') return { editTarget: 'digital',  refTarget: pick(['analog',  'zin']) };
-  if (mode === 'zin')      return { editTarget: 'zin',      refTarget: pick(['analog',  'digital']) };
+  if (mode === 'analoog')  return { editTarget: 'analog',  refTarget: pick(['digital', 'zin']) };
+  if (mode === 'digitaal') return { editTarget: 'digital', refTarget: pick(['analog',  'zin']) };
+  if (mode === 'zin')      return { editTarget: 'zin',     refTarget: pick(['analog',  'digital']) };
   const [a, b] = PAIRINGS[Math.floor(Math.random() * 3)];
-  return Math.random() < 0.5
-    ? { editTarget: a, refTarget: b }
-    : { editTarget: b, refTarget: a };
+  return Math.random() < 0.5 ? { editTarget: a, refTarget: b } : { editTarget: b, refTarget: a };
 };
 
 const freshRound = (mode, minutesLevel, hourMode) => {
@@ -43,12 +66,22 @@ const freshRound = (mode, minutesLevel, hourMode) => {
   };
 };
 
+const rollingPercentage = (history) => {
+  const w = history.slice(-20);
+  return w.length === 0 ? 0 : Math.round(w.filter(Boolean).length / w.length * 100);
+};
+
+const isComplete = (history) =>
+  history.length >= 20 && history.slice(-20).filter(Boolean).length >= 18;
+
 export function createGameStore() {
   const store = createStore({
-    screen: 'start',
+    screen: 'mode-select',
     mode: null,
     minutesLevel: null,
     hourMode: null,
+    currentGameKey: null,
+    sessionHistory: [],
     roundIndex: 0,
     editTarget: 'digital',
     refTarget: 'analog',
@@ -56,28 +89,42 @@ export function createGameStore() {
     editTime: { hours: 12, minutes: 0 },
     checked: false,
     correct: false,
+    scores: loadScores(),
   });
 
   return {
     get: store.get,
     subscribe: store.subscribe,
-    goToStart: () => store.set({ screen: 'start' }),
-    goToModeSelect: () => store.set({ screen: 'mode-select' }),
+    goToModeSelect: () => store.set({ screen: 'mode-select', currentGameKey: null, sessionHistory: [] }),
     goToMinutesSelect: () => store.set({ screen: 'minutes-select' }),
     selectMode: (mode) => store.set({ mode, screen: 'minutes-select' }),
     selectMinutesLevel: (minutesLevel) => store.set({ minutesLevel, screen: 'hour-mode-select' }),
     selectHourMode: (hourMode) => {
       const { mode, minutesLevel } = store.get();
-      store.set({ hourMode, screen: 'game', roundIndex: 0, ...freshRound(mode, minutesLevel, hourMode) });
+      const key = gameKey(mode, minutesLevel, hourMode);
+      store.set({ hourMode, screen: 'game', roundIndex: 0, currentGameKey: key, sessionHistory: [], ...freshRound(mode, minutesLevel, hourMode) });
     },
     nextRound: () => {
       const { mode, roundIndex, minutesLevel, hourMode } = store.get();
-      const next = roundIndex + 1;
-      store.set({ roundIndex: next, ...freshRound(mode, minutesLevel, hourMode) });
+      store.set({ roundIndex: roundIndex + 1, ...freshRound(mode, minutesLevel, hourMode) });
     },
     check: () => {
-      const { referenceTime, editTime } = store.get();
-      store.set({ checked: true, correct: timesEqualAnalog(referenceTime, editTime) });
+      const { referenceTime, editTime, scores, currentGameKey, sessionHistory } = store.get();
+      const correct = timesEqualAnalog(referenceTime, editTime);
+      const newSession = [...sessionHistory, correct];
+      const percentage = rollingPercentage(newSession);
+      const prev = scores[currentGameKey] || { completed: false, percentage: 0 };
+      const completed = isComplete(newSession) || prev.completed;
+      const newScores = { ...scores, [currentGameKey]: { completed, percentage } };
+      saveScores(newScores);
+      const justCompleted = isComplete(newSession) && !prev.completed;
+      store.set({
+        checked: true,
+        correct,
+        sessionHistory: newSession,
+        scores: newScores,
+        ...(justCompleted ? { screen: 'game-complete' } : {}),
+      });
     },
     setEditTime: (time) => store.set({ editTime: time }),
   };

@@ -1,4 +1,4 @@
-import { createGameStore } from './store.js';
+import { createGameStore, gameKey, getOptionStatus } from './store.js';
 import { MINUTE_LEVELS, HOUR_MODES, getDifficulty } from './difficulties.js';
 import { DigitalClock } from './components/DigitalClock.js';
 import { AnalogClock } from './components/AnalogClock.js';
@@ -13,54 +13,71 @@ let prevToDestroy = [];
 const btn = (label, cls, onClick) =>
   createElement('button', { class: cls, type: 'button', onClick }, label);
 
-function renderStart() {
-  const el = createElement('section', { class: 'screen screen--center' });
-  el.appendChild(createElement('h1', { class: 'game-title' }, 'Klok Oefenen'));
-  el.appendChild(btn('Start', 'btn btn--primary btn--lg', () => store.goToModeSelect()));
+function renderNav(opts = {}) {
+  const nav = createElement('nav', { class: 'app-nav' });
+  nav.appendChild(createElement('span', { class: 'app-nav__title' }, 'Klok Oefenen'));
+  if (opts.back) nav.appendChild(btn(opts.back.label, 'btn btn--ghost', opts.back.onClick));
+  return nav;
+}
+
+function scoreCardBtn(label, status, extraCls, onClick) {
+  const cls = [
+    'btn', extraCls,
+    status?.completed ? 'btn--completed' : status ? 'btn--progress' : '',
+  ].filter(Boolean).join(' ');
+  const el = createElement('button', { class: cls, type: 'button', onClick });
+  el.appendChild(createElement('span', { class: 'choice-label' }, label));
+  if (status) {
+    el.appendChild(createElement('span', { class: 'score-badge' }, `${status.percentage}%`));
+  }
   return el;
 }
 
 function renderModeSelect() {
+  const { scores } = store.get();
   const el = createElement('section', { class: 'screen screen--center' });
+  el.appendChild(renderNav());
   el.appendChild(createElement('h2', { class: 'screen-heading' }, 'Wat wil je oefenen?'));
   const group = createElement('div', { class: 'btn-group' });
   for (const [label, value] of [['Analoog', 'analoog'], ['Digitaal', 'digitaal'], ['Zin', 'zin'], ['Beide', 'beide']]) {
-    group.appendChild(btn(label, 'btn btn--choice', () => store.selectMode(value)));
+    const status = getOptionStatus(scores, value);
+    group.appendChild(scoreCardBtn(label, status, 'btn--choice', () => store.selectMode(value)));
   }
   el.appendChild(group);
-  el.appendChild(btn('← Terug', 'btn btn--ghost', () => store.goToStart()));
   return el;
 }
 
 function renderMinutesSelect() {
+  const { scores, mode } = store.get();
   const el = createElement('section', { class: 'screen screen--center' });
+  el.appendChild(renderNav({ back: { label: '← Terug', onClick: () => store.goToModeSelect() } }));
   el.appendChild(createElement('p', { class: 'select-step' }, 'Stap 1 van 2 — Minuten'));
   el.appendChild(createElement('h2', { class: 'screen-heading' }, 'Kies een niveau'));
   const grid = createElement('div', { class: 'difficulty-grid' });
   for (const level of MINUTE_LEVELS) {
-    const card = createElement('button', { class: 'btn btn--difficulty', type: 'button', onClick: () => store.selectMinutesLevel(level.id) });
-    card.appendChild(createElement('span', { class: 'difficulty-label' }, level.label));
+    const status = getOptionStatus(scores, mode, level.id);
+    const card = scoreCardBtn(level.label, status, 'btn--difficulty', () => store.selectMinutesLevel(level.id));
     card.appendChild(createElement('span', { class: 'difficulty-sub' }, level.sublabel));
     grid.appendChild(card);
   }
   el.appendChild(grid);
-  el.appendChild(btn('← Terug', 'btn btn--ghost', () => store.goToModeSelect()));
   return el;
 }
 
 function renderHourModeSelect() {
+  const { scores, mode, minutesLevel } = store.get();
   const el = createElement('section', { class: 'screen screen--center' });
+  el.appendChild(renderNav({ back: { label: '← Terug', onClick: () => store.goToMinutesSelect() } }));
   el.appendChild(createElement('p', { class: 'select-step' }, 'Stap 2 van 2 — Uren'));
   el.appendChild(createElement('h2', { class: 'screen-heading' }, 'Kies een urennotatie'));
   const group = createElement('div', { class: 'hour-mode-group' });
-  for (const mode of HOUR_MODES) {
-    const card = createElement('button', { class: 'btn btn--hour-mode', type: 'button', onClick: () => store.selectHourMode(mode.id) });
-    card.appendChild(createElement('span', { class: 'hour-mode-label' }, mode.label));
-    card.appendChild(createElement('span', { class: 'hour-mode-sub' }, mode.sublabel));
+  for (const hm of HOUR_MODES) {
+    const status = getOptionStatus(scores, mode, minutesLevel, hm.id);
+    const card = scoreCardBtn(hm.label, status, 'btn--hour-mode', () => store.selectHourMode(hm.id));
+    card.appendChild(createElement('span', { class: 'hour-mode-sub' }, hm.sublabel));
     group.appendChild(card);
   }
   el.appendChild(group);
-  el.appendChild(btn('← Terug', 'btn btn--ghost', () => store.goToMinutesSelect()));
   return el;
 }
 
@@ -74,7 +91,7 @@ function renderGame(state) {
   prevToDestroy.forEach(c => c.destroy());
   prevToDestroy = [];
 
-  const { editTarget, refTarget, referenceTime, editTime, checked, correct, minutesLevel, hourMode } = state;
+  const { editTarget, refTarget, referenceTime, editTime, checked, correct, minutesLevel, hourMode, sessionHistory } = state;
   const diff = getDifficulty(minutesLevel, hourMode);
   const isEditable = !checked;
 
@@ -105,12 +122,19 @@ function renderGame(state) {
 
   const makeCell = (comp, target, isEdit) => {
     const [readLabel, editLabel] = COMPONENT_LABELS[target];
-    const label = isEdit ? editLabel : readLabel;
     const cell = createElement('div', { class: 'clock-cell' + (isEdit ? ' clock-cell--edit' : '') });
-    cell.appendChild(createElement('div', { class: 'clock-label' + (isEdit ? ' clock-label--edit' : '') }, label));
+    cell.appendChild(createElement('div', { class: 'clock-label' + (isEdit ? ' clock-label--edit' : '') }, isEdit ? editLabel : readLabel));
     cell.appendChild(comp.el);
     return cell;
   };
+
+  const correctCount = sessionHistory.filter(Boolean).length;
+  const total = sessionHistory.length;
+  const scoreText = total === 0 ? 'Nog geen vragen' : `${correctCount}/${total} goed`;
+
+  const header = createElement('div', { class: 'game-header' });
+  header.appendChild(createElement('span', { class: 'game-score' }, scoreText));
+  header.appendChild(btn('← Terug', 'btn btn--ghost', () => store.goToModeSelect()));
 
   const grid = createElement('div', { class: 'clock-grid' });
   grid.appendChild(makeCell(editComp, editTarget, true));
@@ -128,8 +152,24 @@ function renderGame(state) {
   }
 
   const el = createElement('section', { class: 'screen screen--game' });
+  el.appendChild(header);
   el.appendChild(grid);
   el.appendChild(footer);
+  return el;
+}
+
+function renderGameComplete(state) {
+  const { scores, currentGameKey, mode } = state;
+  const entry = scores[currentGameKey] || { percentage: 0 };
+  const modeLabels = { analoog: 'Analoog', digitaal: 'Digitaal', zin: 'Zin', beide: 'Beide' };
+
+  const el = createElement('section', { class: 'screen screen--center screen--complete' });
+  el.appendChild(createElement('div', { class: 'complete-icon' }, '🎉'));
+  el.appendChild(createElement('h2', { class: 'screen-heading' }, 'Gefeliciteerd!'));
+  el.appendChild(createElement('p', { class: 'complete-message' },
+    `Je hebt ${modeLabels[mode] || mode} geoefend met ${entry.percentage}% goed.`));
+  el.appendChild(createElement('p', { class: 'complete-sub' }, 'Je beheerst dit onderdeel uitstekend!'));
+  el.appendChild(btn('Ander oefening kiezen', 'btn btn--primary btn--lg', () => store.goToModeSelect()));
   return el;
 }
 
@@ -140,13 +180,13 @@ store.subscribe(state => {
   if (key === lastKey) return;
   lastKey = key;
   app.innerHTML = '';
-  if      (state.screen === 'start')            app.appendChild(renderStart());
-  else if (state.screen === 'mode-select')      app.appendChild(renderModeSelect());
+  if      (state.screen === 'mode-select')      app.appendChild(renderModeSelect());
   else if (state.screen === 'minutes-select')   app.appendChild(renderMinutesSelect());
   else if (state.screen === 'hour-mode-select') app.appendChild(renderHourModeSelect());
   else if (state.screen === 'game')             app.appendChild(renderGame(state));
+  else if (state.screen === 'game-complete')    app.appendChild(renderGameComplete(state));
 });
 
 const init = store.get();
 lastKey = `${init.screen}|${init.roundIndex}|${init.checked}`;
-app.appendChild(renderStart());
+app.appendChild(renderModeSelect());
