@@ -383,6 +383,60 @@ input[type="checkbox"] {
   padding-bottom: 8px;
 }
 
+.difficulty-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+  width: 100%;
+  max-width: 480px;
+}
+
+.btn--difficulty {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 4px;
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius);
+  padding: 16px 20px;
+  cursor: pointer;
+  text-align: left;
+  font-family: var(--font);
+  transition: border-color 0.15s, background 0.15s;
+}
+
+.btn--difficulty:hover {
+  border-color: var(--color-accent);
+  background: var(--color-bg);
+}
+
+.difficulty-label {
+  font-size: 15px;
+  font-weight: 600;
+  color: var(--color-text);
+}
+
+.difficulty-sub {
+  font-size: 12px;
+  color: var(--color-text-muted);
+}
+
+.btn--ghost {
+  background: none;
+  border: none;
+  color: var(--color-text-muted);
+  font-size: 13px;
+  font-family: var(--font);
+  cursor: pointer;
+  padding: 8px 4px;
+  transition: color 0.15s;
+}
+
+.btn--ghost:hover {
+  color: var(--color-text);
+}
+
 @media (max-width: 540px) {
   .clock-grid {
     grid-template-columns: 1fr;
@@ -396,5 +450,8 @@ input[type="checkbox"] {
   }
   .btn--choice {
     min-width: unset;
+  }
+  .difficulty-grid {
+    grid-template-columns: 1fr;
   }
 }

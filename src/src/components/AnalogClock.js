@@ -20,9 +20,10 @@ const setLine = (line, angleDeg, length) => {
 };
 
 export class AnalogClock {
-  constructor({ showNumbers = true, editable = true } = {}) {
+  constructor({ showNumbers = true, editable = true, minuteEditable = true } = {}) {
     this._showNumbers = showNumbers;
     this._editable = editable;
+    this._minuteEditable = editable && minuteEditable;
     this._hours = 0;
     this._minutes = 0;
     this._dragging = null;
@@ -48,7 +49,7 @@ export class AnalogClock {
     this.el.appendChild(this._minuteHand);
     this.el.appendChild(this._hourHand);
     if (this._editable) {
-      this.el.appendChild(this._minuteHit);
+      if (this._minuteEditable) this.el.appendChild(this._minuteHit);
       this.el.appendChild(this._hourHit);
     }
     this.el.appendChild(svgEl('circle', { cx: CX, cy: CY, r: 5, class: 'center-dot' }));
@@ -98,7 +99,7 @@ export class AnalogClock {
     setLine(this._minuteHand, mAngle, 72);
     if (this._editable) {
       setLine(this._hourHit, hAngle, 52);
-      setLine(this._minuteHit, mAngle, 72);
+      if (this._minuteEditable) setLine(this._minuteHit, mAngle, 72);
     }
   }
 
@@ -131,7 +132,9 @@ export class AnalogClock {
       if (!this._editable) return;
       const hand = target.closest?.('[data-hand]') ?? (target.hasAttribute?.('data-hand') ? target : null);
       if (!hand) return;
-      this._dragging = hand.getAttribute('data-hand');
+      const handType = hand.getAttribute('data-hand');
+      if (handType === 'minute' && !this._minuteEditable) return;
+      this._dragging = handType;
     };
 
     const onCoords = (clientX, clientY) => {

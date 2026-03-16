@@ -3,7 +3,7 @@ id: "003"
 title: Game Shell
 variation_instructions:
  - "IMPORTANT: Implement from the inside out. Use the wishful programming approach. Write the internal code you wish you had, before you write the code that uses it."
- - "IMPORTANT: Implement the outside first, the functional code, before the internal implementation."
+#  - "IMPORTANT: Implement the outside first, the functional code, before the internal implementation."
 ---
 
 Implement a game loop. The page should have a "Start" button with nothing else. The UI language should be Dutch. After clicking start the user is shown a question ("Wat wil je oefenen?") and three choices: "Analoog", "Digitaal", "Beide"

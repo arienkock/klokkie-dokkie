@@ -1,4 +1,5 @@
-import { randomTime, timesEqualAnalog } from './utils/time.js';
+import { getDifficulty } from './difficulties.js';
+import { timesEqualAnalog } from './utils/time.js';
 
 export function createStore(initial) {
   let state = { ...initial };
@@ -6,12 +7,7 @@ export function createStore(initial) {
 
   return {
     get: () => ({ ...state }),
-    getTime: () => ({ ...state }),
     set: (patch) => {
-      state = { ...state, ...patch };
-      subs.forEach(fn => fn({ ...state }));
-    },
-    setTime: (patch) => {
       state = { ...state, ...patch };
       subs.forEach(fn => fn({ ...state }));
     },
@@ -27,18 +23,22 @@ const editTargetForMode = (mode, roundIndex) =>
   : mode === 'digitaal' ? 'digital'
   : roundIndex % 2 === 0 ? 'digital' : 'analog';
 
-const freshRound = (mode, roundIndex) => ({
-  referenceTime: randomTime(),
-  editTime: { hours: 12, minutes: 0 },
-  editTarget: editTargetForMode(mode, roundIndex),
-  checked: false,
-  correct: false,
-});
+const freshRound = (mode, roundIndex, difficultyId) => {
+  const diff = getDifficulty(difficultyId);
+  return {
+    referenceTime: diff.randomTime(),
+    editTime: { ...diff.initialEditTime },
+    editTarget: editTargetForMode(mode, roundIndex),
+    checked: false,
+    correct: false,
+  };
+};
 
 export function createGameStore() {
   const store = createStore({
     screen: 'start',
     mode: null,
+    difficulty: null,
     roundIndex: 0,
     editTarget: 'digital',
     referenceTime: { hours: 12, minutes: 0 },
@@ -50,14 +50,18 @@ export function createGameStore() {
   return {
     get: store.get,
     subscribe: store.subscribe,
+    goToStart: () => store.set({ screen: 'start' }),
     goToModeSelect: () => store.set({ screen: 'mode-select' }),
-    selectMode: (mode) => {
-      store.set({ screen: 'game', mode, roundIndex: 0, ...freshRound(mode, 0) });
+    goToDifficultySelect: () => store.set({ screen: 'difficulty-select' }),
+    selectMode: (mode) => store.set({ mode, screen: 'difficulty-select' }),
+    selectDifficulty: (difficultyId) => {
+      const { mode } = store.get();
+      store.set({ difficulty: difficultyId, screen: 'game', roundIndex: 0, ...freshRound(mode, 0, difficultyId) });
     },
     nextRound: () => {
-      const { mode, roundIndex } = store.get();
+      const { mode, roundIndex, difficulty } = store.get();
       const next = roundIndex + 1;
-      store.set({ roundIndex: next, ...freshRound(mode, next) });
+      store.set({ roundIndex: next, ...freshRound(mode, next, difficulty) });
     },
     check: () => {
       const { referenceTime, editTime } = store.get();
