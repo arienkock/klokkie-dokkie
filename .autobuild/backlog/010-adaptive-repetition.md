@@ -1,6 +1,8 @@
 ---
 id: "010"
 title: Adaptive repetition
+variation_instructions:
+ - "No fluff, just stuff"
 ---
 
 Implement adaptive problem repetition within each game mode. When a player answers a problem incorrectly, that problem is added to a revisit queue. After 2 other problems have been presented, the incorrectly answered problem is reintroduced. The revisit queue has a maximum length of 5 items; if the queue is full, the oldest item is dropped to make room for the new one.

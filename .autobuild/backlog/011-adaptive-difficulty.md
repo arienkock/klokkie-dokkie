@@ -1,6 +1,8 @@
 ---
 id: "011"
 title: Adaptive difficulty mode
+variation_instructions:
+ - "No fluff, just stuff"
 ---
 
 Add an "Adaptief" option to the difficulty selection screen (the second choice, where the player currently picks a specific difficulty level). This option is available for every game mode that has multiple difficulty levels.

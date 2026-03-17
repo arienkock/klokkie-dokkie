@@ -74,6 +74,14 @@ const rollingPercentage = (history) => {
 const isComplete = (history) =>
   history.length >= 20 && history.slice(-20).filter(Boolean).length >= 18;
 
+const REVISIT_QUEUE_MAX = 5;
+const REVISIT_AFTER = 2;
+
+const enqueueRevisit = (queue, problem) => {
+  const next = [...queue, problem];
+  return next.length > REVISIT_QUEUE_MAX ? next.slice(1) : next;
+};
+
 export function createGameStore() {
   const store = createStore({
     screen: 'mode-select',
@@ -90,26 +98,39 @@ export function createGameStore() {
     checked: false,
     correct: false,
     scores: loadScores(),
+    revisitQueue: [],
+    roundsSinceEnqueue: 0,
   });
 
   return {
     get: store.get,
     subscribe: store.subscribe,
-    goToModeSelect: () => store.set({ screen: 'mode-select', currentGameKey: null, sessionHistory: [] }),
+    goToModeSelect: () => store.set({ screen: 'mode-select', currentGameKey: null, sessionHistory: [], revisitQueue: [], roundsSinceEnqueue: 0 }),
     goToMinutesSelect: () => store.set({ screen: 'minutes-select' }),
     selectMode: (mode) => store.set({ mode, screen: 'minutes-select' }),
     selectMinutesLevel: (minutesLevel) => store.set({ minutesLevel, screen: 'hour-mode-select' }),
     selectHourMode: (hourMode) => {
       const { mode, minutesLevel } = store.get();
       const key = gameKey(mode, minutesLevel, hourMode);
-      store.set({ hourMode, screen: 'game', roundIndex: 0, currentGameKey: key, sessionHistory: [], ...freshRound(mode, minutesLevel, hourMode) });
+      store.set({ hourMode, screen: 'game', roundIndex: 0, currentGameKey: key, sessionHistory: [], revisitQueue: [], roundsSinceEnqueue: 0, ...freshRound(mode, minutesLevel, hourMode) });
     },
     nextRound: () => {
-      const { mode, roundIndex, minutesLevel, hourMode } = store.get();
-      store.set({ roundIndex: roundIndex + 1, ...freshRound(mode, minutesLevel, hourMode) });
+      const { mode, roundIndex, minutesLevel, hourMode, revisitQueue, roundsSinceEnqueue } = store.get();
+      const diff = getDifficulty(minutesLevel, hourMode);
+      const useRevisit = revisitQueue.length > 0 && roundsSinceEnqueue >= REVISIT_AFTER;
+      const [revisitProblem, ...remainingQueue] = revisitQueue;
+      const round = useRevisit
+        ? { ...revisitProblem, editTime: { ...diff.initialEditTime }, checked: false, correct: false }
+        : freshRound(mode, minutesLevel, hourMode);
+      store.set({
+        roundIndex: roundIndex + 1,
+        revisitQueue: useRevisit ? remainingQueue : revisitQueue,
+        roundsSinceEnqueue: useRevisit ? 0 : roundsSinceEnqueue + 1,
+        ...round,
+      });
     },
     check: () => {
-      const { referenceTime, editTime, scores, currentGameKey, sessionHistory } = store.get();
+      const { referenceTime, editTime, scores, currentGameKey, sessionHistory, revisitQueue, editTarget, refTarget } = store.get();
       const correct = timesEqualAnalog(referenceTime, editTime);
       const newSession = [...sessionHistory, correct];
       const percentage = rollingPercentage(newSession);
@@ -118,11 +139,14 @@ export function createGameStore() {
       const newScores = { ...scores, [currentGameKey]: { completed, percentage } };
       saveScores(newScores);
       const justCompleted = isComplete(newSession) && !prev.completed;
+      const newRevisitQueue = correct ? revisitQueue : enqueueRevisit(revisitQueue, { referenceTime, editTarget, refTarget });
       store.set({
         checked: true,
         correct,
         sessionHistory: newSession,
         scores: newScores,
+        revisitQueue: newRevisitQueue,
+        ...(!correct ? { roundsSinceEnqueue: 0 } : {}),
         ...(justCompleted ? { screen: 'game-complete' } : {}),
       });
     },
