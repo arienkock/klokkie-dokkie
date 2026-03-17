@@ -3,6 +3,7 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
+    "build": "vite build",
     "test": "node node_modules/vitest/vitest.mjs run"
   },
   "dependencies": {
