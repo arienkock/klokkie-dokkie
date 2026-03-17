@@ -485,6 +485,18 @@ input[type="checkbox"] {
   font-weight: 400;
 }
 
+.btn--adaptive {
+  grid-column: span 2;
+  border-style: dashed;
+  border-color: var(--color-accent);
+}
+
+.btn--adaptive .choice-label::after {
+  content: ' ✦';
+  font-size: 11px;
+  opacity: 0.5;
+}
+
 .btn--ghost {
   background: none;
   border: none;
@@ -708,5 +720,8 @@ input[type="checkbox"] {
   }
   .difficulty-grid {
     grid-template-columns: 1fr;
+  }
+  .btn--adaptive {
+    grid-column: span 1;
   }
 }

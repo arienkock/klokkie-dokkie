@@ -1,4 +1,4 @@
-import { getDifficulty, MINUTE_LEVELS, HOUR_MODES } from './difficulties.js';
+import { getDifficulty, MINUTE_LEVELS, HOUR_MODES, ADAPTIVE_LEVELS } from './difficulties.js';
 import { timesEqualAnalog } from './utils/time.js';
 
 export function createStore(initial) {
@@ -19,6 +19,7 @@ export function createStore(initial) {
 }
 
 const LS_KEY = 'klok-oefenen-scores';
+const LS_ADAPTIVE_KEY = 'klok-oefenen-adaptive';
 
 const loadScores = () => {
   try { return JSON.parse(localStorage.getItem(LS_KEY) || '{}'); }
@@ -28,6 +29,18 @@ const loadScores = () => {
 const saveScores = (scores) => {
   try { localStorage.setItem(LS_KEY, JSON.stringify(scores)); }
   catch {}
+};
+
+const loadAdaptiveLevels = () => {
+  try { return JSON.parse(localStorage.getItem(LS_ADAPTIVE_KEY) || '{}'); }
+  catch { return {}; }
+};
+
+const saveAdaptiveLevel = (mode, level) => {
+  try {
+    const all = loadAdaptiveLevels();
+    localStorage.setItem(LS_ADAPTIVE_KEY, JSON.stringify({ ...all, [mode]: level }));
+  } catch {}
 };
 
 export const gameKey = (mode, minutesLevel, hourMode) => `${mode}-${minutesLevel}-${hourMode}`;
@@ -88,6 +101,8 @@ export function createGameStore() {
     mode: null,
     minutesLevel: null,
     hourMode: null,
+    adaptive: false,
+    adaptiveLevel: 0,
     currentGameKey: null,
     sessionHistory: [],
     roundIndex: 0,
@@ -105,14 +120,32 @@ export function createGameStore() {
   return {
     get: store.get,
     subscribe: store.subscribe,
-    goToModeSelect: () => store.set({ screen: 'mode-select', currentGameKey: null, sessionHistory: [], revisitQueue: [], roundsSinceEnqueue: 0 }),
+    goToModeSelect: () => store.set({ screen: 'mode-select', currentGameKey: null, sessionHistory: [], revisitQueue: [], roundsSinceEnqueue: 0, adaptive: false }),
     goToMinutesSelect: () => store.set({ screen: 'minutes-select' }),
     selectMode: (mode) => store.set({ mode, screen: 'minutes-select' }),
     selectMinutesLevel: (minutesLevel) => store.set({ minutesLevel, screen: 'hour-mode-select' }),
     selectHourMode: (hourMode) => {
       const { mode, minutesLevel } = store.get();
       const key = gameKey(mode, minutesLevel, hourMode);
-      store.set({ hourMode, screen: 'game', roundIndex: 0, currentGameKey: key, sessionHistory: [], revisitQueue: [], roundsSinceEnqueue: 0, ...freshRound(mode, minutesLevel, hourMode) });
+      store.set({ hourMode, adaptive: false, screen: 'game', roundIndex: 0, currentGameKey: key, sessionHistory: [], revisitQueue: [], roundsSinceEnqueue: 0, ...freshRound(mode, minutesLevel, hourMode) });
+    },
+    selectAdaptive: () => {
+      const { mode } = store.get();
+      const savedLevel = (loadAdaptiveLevels()[mode] ?? 0);
+      const adl = ADAPTIVE_LEVELS[savedLevel];
+      store.set({
+        adaptive: true,
+        adaptiveLevel: savedLevel,
+        minutesLevel: adl.minuteLevelId,
+        hourMode: adl.hourModeId,
+        screen: 'game',
+        roundIndex: 0,
+        currentGameKey: `${mode}-adaptive`,
+        sessionHistory: [],
+        revisitQueue: [],
+        roundsSinceEnqueue: 0,
+        ...freshRound(mode, adl.minuteLevelId, adl.hourModeId),
+      });
     },
     nextRound: () => {
       const { mode, roundIndex, minutesLevel, hourMode, revisitQueue, roundsSinceEnqueue } = store.get();
@@ -130,7 +163,7 @@ export function createGameStore() {
       });
     },
     check: () => {
-      const { referenceTime, editTime, scores, currentGameKey, sessionHistory, revisitQueue, editTarget, refTarget } = store.get();
+      const { referenceTime, editTime, scores, currentGameKey, sessionHistory, revisitQueue, editTarget, refTarget, adaptive, adaptiveLevel, mode } = store.get();
       const correct = timesEqualAnalog(referenceTime, editTime);
       const newSession = [...sessionHistory, correct];
       const percentage = rollingPercentage(newSession);
@@ -140,6 +173,15 @@ export function createGameStore() {
       saveScores(newScores);
       const justCompleted = isComplete(newSession) && !prev.completed;
       const newRevisitQueue = correct ? revisitQueue : enqueueRevisit(revisitQueue, { referenceTime, editTarget, refTarget });
+      let adaptivePatch = {};
+      if (adaptive) {
+        const newAdaptiveLevel = correct
+          ? Math.min(adaptiveLevel + 2, ADAPTIVE_LEVELS.length - 1)
+          : Math.max(adaptiveLevel - 1, 0);
+        saveAdaptiveLevel(mode, newAdaptiveLevel);
+        const adl = ADAPTIVE_LEVELS[newAdaptiveLevel];
+        adaptivePatch = { adaptiveLevel: newAdaptiveLevel, minutesLevel: adl.minuteLevelId, hourMode: adl.hourModeId };
+      }
       store.set({
         checked: true,
         correct,
@@ -148,6 +190,7 @@ export function createGameStore() {
         revisitQueue: newRevisitQueue,
         ...(!correct ? { roundsSinceEnqueue: 0 } : {}),
         ...(justCompleted ? { screen: 'game-complete' } : {}),
+        ...adaptivePatch,
       });
     },
     setEditTime: (time) => store.set({ editTime: time }),

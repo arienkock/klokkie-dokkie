@@ -59,6 +59,11 @@ export const HOUR_MODES = [
 export const getMinuteLevel = (id) => MINUTE_LEVELS.find(l => l.id === id);
 export const getHourMode = (id) => HOUR_MODES.find(m => m.id === id);
 
+// Ordered progression for adaptive mode: minute levels × hour modes
+export const ADAPTIVE_LEVELS = MINUTE_LEVELS.flatMap(ml =>
+  HOUR_MODES.map(hm => ({ minuteLevelId: ml.id, hourModeId: hm.id }))
+);
+
 export const getDifficulty = (minuteLevelId, hourModeId) => {
   const ml = getMinuteLevel(minuteLevelId);
   const hm = getHourMode(hourModeId);

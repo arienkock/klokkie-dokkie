@@ -60,6 +60,10 @@ function renderMinutesSelect() {
     card.appendChild(createElement('span', { class: 'difficulty-sub' }, level.sublabel));
     grid.appendChild(card);
   }
+  const adaptiveStatus = scores[`${mode}-adaptive`] || null;
+  const adaptiveCard = scoreCardBtn('Adaptief', adaptiveStatus, 'btn--difficulty btn--adaptive', () => store.selectAdaptive());
+  adaptiveCard.appendChild(createElement('span', { class: 'difficulty-sub' }, 'Past zich automatisch aan'));
+  grid.appendChild(adaptiveCard);
   el.appendChild(grid);
   return el;
 }

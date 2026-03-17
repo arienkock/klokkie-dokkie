@@ -354,6 +354,121 @@ describe('createGameStore', () => {
     expect(['analog', 'digital']).toContain(store.get().refTarget);
   });
 
+  describe('adaptive mode', () => {
+    it('selectAdaptive starts at level 0 (minuteLevel 1, hourMode 12h)', () => {
+      const store = createGameStore();
+      store.selectMode('analoog');
+      store.selectAdaptive();
+      const state = store.get();
+      expect(state.adaptive).toBe(true);
+      expect(state.adaptiveLevel).toBe(0);
+      expect(state.minutesLevel).toBe(1);
+      expect(state.hourMode).toBe('12h');
+    });
+
+    it('selectAdaptive sets screen to game with correct game key', () => {
+      const store = createGameStore();
+      store.selectMode('analoog');
+      store.selectAdaptive();
+      const state = store.get();
+      expect(state.screen).toBe('game');
+      expect(state.currentGameKey).toBe('analoog-adaptive');
+    });
+
+    it('correct answer in adaptive mode advances level by 2', () => {
+      const store = createGameStore();
+      store.selectMode('analoog');
+      store.selectAdaptive();
+      const { referenceTime } = store.get();
+      store.setEditTime(referenceTime);
+      store.check();
+      expect(store.get().adaptiveLevel).toBe(2);
+    });
+
+    it('incorrect answer in adaptive mode decreases level by 1', () => {
+      const store = createGameStore();
+      store.selectMode('analoog');
+      store.selectAdaptive();
+      // Start at level 2 by answering correctly once first
+      const { referenceTime: rt1 } = store.get();
+      store.setEditTime(rt1);
+      store.check();
+      store.nextRound();
+      // Now answer incorrectly
+      const { referenceTime } = store.get();
+      const wrongTime = { hours: referenceTime.hours === 1 ? 2 : 1, minutes: 30 };
+      store.setEditTime(wrongTime);
+      store.check();
+      expect(store.get().adaptiveLevel).toBe(1);
+    });
+
+    it('adaptive level is clamped at max (7)', () => {
+      const store = createGameStore();
+      store.selectMode('analoog');
+      store.selectAdaptive();
+      // Answer correctly 4 times to try to go past 7
+      for (let i = 0; i < 4; i++) {
+        const { referenceTime } = store.get();
+        store.setEditTime(referenceTime);
+        store.check();
+        if (store.get().screen !== 'game-complete') store.nextRound();
+      }
+      expect(store.get().adaptiveLevel).toBeLessThanOrEqual(7);
+    });
+
+    it('adaptive level is floored at 0 when already at minimum', () => {
+      const store = createGameStore();
+      store.selectMode('analoog');
+      store.selectAdaptive();
+      const { referenceTime } = store.get();
+      const wrongTime = { hours: referenceTime.hours === 1 ? 2 : 1, minutes: 30 };
+      store.setEditTime(wrongTime);
+      store.check();
+      expect(store.get().adaptiveLevel).toBe(0);
+    });
+
+    it('minutesLevel and hourMode update after adaptive level change', () => {
+      const store = createGameStore();
+      store.selectMode('analoog');
+      store.selectAdaptive();
+      const { referenceTime } = store.get();
+      store.setEditTime(referenceTime);
+      store.check();
+      const state = store.get();
+      // level 2 => ADAPTIVE_LEVELS[2] = { minuteLevelId: 2, hourModeId: '12h' }
+      expect(state.minutesLevel).toBe(2);
+      expect(state.hourMode).toBe('12h');
+    });
+
+    it('adaptive level is persisted to localStorage and restored on next session', () => {
+      const store1 = createGameStore();
+      store1.selectMode('digitaal');
+      store1.selectAdaptive();
+      const { referenceTime } = store1.get();
+      store1.setEditTime(referenceTime);
+      store1.check(); // level advances to 2
+
+      const store2 = createGameStore();
+      store2.selectMode('digitaal');
+      store2.selectAdaptive();
+      expect(store2.get().adaptiveLevel).toBe(2);
+    });
+
+    it('adaptive persistence is per game mode', () => {
+      const store1 = createGameStore();
+      store1.selectMode('analoog');
+      store1.selectAdaptive();
+      const { referenceTime } = store1.get();
+      store1.setEditTime(referenceTime);
+      store1.check(); // analoog advances to 2
+
+      const store2 = createGameStore();
+      store2.selectMode('digitaal');
+      store2.selectAdaptive();
+      expect(store2.get().adaptiveLevel).toBe(0); // different mode starts fresh
+    });
+  });
+
   it('zin mode: check marks correct when editTime matches referenceTime', () => {
     const store = createGameStore();
     store.selectMode('zin');

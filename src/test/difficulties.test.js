@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { MINUTE_LEVELS, HOUR_MODES, getMinuteLevel, getHourMode, getDifficulty } from '../src/difficulties.js';
+import { MINUTE_LEVELS, HOUR_MODES, getMinuteLevel, getHourMode, getDifficulty, ADAPTIVE_LEVELS } from '../src/difficulties.js';
 
 describe('MINUTE_LEVELS', () => {
   it('has 4 levels', () => {
@@ -137,5 +137,32 @@ describe('getDifficulty', () => {
 
   it('level 4 + 24h: minuteHandFree is true', () => {
     expect(getDifficulty(4, '24h').minuteHandFree).toBe(true);
+  });
+});
+
+describe('ADAPTIVE_LEVELS', () => {
+  it('has 8 entries (4 minute levels × 2 hour modes)', () => {
+    expect(ADAPTIVE_LEVELS).toHaveLength(8);
+  });
+
+  it('first entry is minuteLevel 1 + 12h (lowest difficulty)', () => {
+    expect(ADAPTIVE_LEVELS[0]).toEqual({ minuteLevelId: 1, hourModeId: '12h' });
+  });
+
+  it('last entry is minuteLevel 4 + 24h (highest difficulty)', () => {
+    expect(ADAPTIVE_LEVELS[7]).toEqual({ minuteLevelId: 4, hourModeId: '24h' });
+  });
+
+  it('all entries have minuteLevelId and hourModeId', () => {
+    for (const entry of ADAPTIVE_LEVELS) {
+      expect(typeof entry.minuteLevelId).toBe('number');
+      expect(typeof entry.hourModeId).toBe('string');
+    }
+  });
+
+  it('minute levels cycle through 12h then 24h before advancing', () => {
+    expect(ADAPTIVE_LEVELS[0]).toEqual({ minuteLevelId: 1, hourModeId: '12h' });
+    expect(ADAPTIVE_LEVELS[1]).toEqual({ minuteLevelId: 1, hourModeId: '24h' });
+    expect(ADAPTIVE_LEVELS[2]).toEqual({ minuteLevelId: 2, hourModeId: '12h' });
   });
 });
