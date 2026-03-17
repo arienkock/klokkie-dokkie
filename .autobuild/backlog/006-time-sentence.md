@@ -66,7 +66,7 @@ De gekozen representatie is de **bewerkbare** component. De **vaste** (vraag-)co
 | Digitaal | Analoog **of** Zin |
 | Zin | Analoog **of** Digitaal |
 
-"Beide" (de huidige optie) blijft bestaan en koppelt Analoog ↔ Digitaal zoals nu, met "Zin" als mogelijke derde partner: bij "Beide" wordt willekeurig een van de drie pairings (Analoog↔Digitaal, Analoog↔Zin, Digitaal↔Zin) gekozen per ronde, waarbij één van de twee willekeurig bewerkbaar is.
+"Beide" (de huidige optie) blijft bestaan en koppelt Analoog ↔ Digitaal zoals nu, met "Zin" als mogelijke derde partner: bij "Beide" wordt willekeurig een van de drie pairings (Analoog↔Digitaal, Analoog↔Zin, Digitaal↔Zin) gekozen per ronde, waarbij één van de twee willekeurig bewerkbaar is. De knop "Beide" moet nu "Alles" heten, omdat alle types gemengd worden behandeld.
 
 ---
 

@@ -43,7 +43,7 @@ describe('createStore', () => {
 describe('gameKey', () => {
   it('produces a string key from mode, level, hourMode', () => {
     expect(gameKey('analoog', 1, '12h')).toBe('analoog-1-12h');
-    expect(gameKey('beide', 4, '24h')).toBe('beide-4-24h');
+    expect(gameKey('alles', 4, '24h')).toBe('alles-4-24h');
   });
 });
 
@@ -280,7 +280,7 @@ describe('createGameStore', () => {
 
   it('goToMinutesSelect changes screen', () => {
     const store = createGameStore();
-    store.selectMode('beide');
+    store.selectMode('alles');
     store.goToMinutesSelect();
     expect(store.get().screen).toBe('minutes-select');
   });
@@ -295,9 +295,9 @@ describe('createGameStore', () => {
     expect(store.get().editTarget).toBe('analog');
   });
 
-  it('editTarget for beide mode is one of the three component types', () => {
+  it('editTarget for alles mode is one of the three component types', () => {
     const store = createGameStore();
-    store.selectMode('beide');
+    store.selectMode('alles');
     store.selectMinutesLevel(4);
     store.selectHourMode('12h');
     const valid = ['analog', 'digital', 'zin'];
@@ -308,7 +308,7 @@ describe('createGameStore', () => {
 
   it('editTarget and refTarget are always different', () => {
     const store = createGameStore();
-    for (const mode of ['analoog', 'digitaal', 'zin', 'beide']) {
+    for (const mode of ['analoog', 'digitaal', 'zin', 'alles']) {
       store.selectMode(mode);
       store.selectMinutesLevel(4);
       store.selectHourMode('12h');

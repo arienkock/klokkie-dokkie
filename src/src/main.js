@@ -39,7 +39,7 @@ function renderModeSelect() {
   el.appendChild(renderNav());
   el.appendChild(createElement('h2', { class: 'screen-heading' }, 'Wat wil je oefenen?'));
   const group = createElement('div', { class: 'btn-group' });
-  for (const [label, value] of [['Analoog', 'analoog'], ['Digitaal', 'digitaal'], ['Zin', 'zin'], ['Beide', 'beide']]) {
+  for (const [label, value] of [['Analoog', 'analoog'], ['Digitaal', 'digitaal'], ['Zin', 'zin'], ['Alles', 'alles']]) {
     const status = getOptionStatus(scores, value);
     group.appendChild(scoreCardBtn(label, status, 'btn--choice', () => store.selectMode(value)));
   }
@@ -161,7 +161,7 @@ function renderGame(state) {
 function renderGameComplete(state) {
   const { scores, currentGameKey, mode } = state;
   const entry = scores[currentGameKey] || { percentage: 0 };
-  const modeLabels = { analoog: 'Analoog', digitaal: 'Digitaal', zin: 'Zin', beide: 'Beide' };
+  const modeLabels = { analoog: 'Analoog', digitaal: 'Digitaal', zin: 'Zin', alles: 'Alles' };
 
   const el = createElement('section', { class: 'screen screen--center screen--complete' });
   el.appendChild(createElement('div', { class: 'complete-icon' }, '🎉'));
