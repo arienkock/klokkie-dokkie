@@ -1,5 +1,7 @@
 # Klokkie-Dokkie
 
+## [▶ Open de app](https://arienkock.github.io/klokkie-dokkie/)
+
 Een interactieve webapp om klok lezen te oefenen. Bedoeld voor leerlingen die leren klokkijken in het Nederlands.
 
 ## Wat doet het?
