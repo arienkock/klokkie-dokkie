@@ -127,7 +127,10 @@ function renderGame(state) {
 
   if (isEditable) {
     if (editTarget === 'zin') {
-      editComp.onChange(({ correct: zinCorrect }) => store.check(zinCorrect));
+      // On a wrong attempt, let the red shake on the misplaced words paint
+      // before the re-render replaces them; check() guards double calls.
+      editComp.onChange(({ correct: zinCorrect }) =>
+        zinCorrect ? store.check(true) : setTimeout(() => store.check(false), 700));
     } else {
       editComp.onChange(t => store.setEditTime(t));
     }
