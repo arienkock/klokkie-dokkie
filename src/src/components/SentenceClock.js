@@ -58,19 +58,12 @@ export class SentenceClock {
   _checkComplete() {
     if (this._placed.some(p => p === null)) return;
     const correct = this._placed.every((p, i) => p.word === this._correctWords[i]);
-    if (correct) {
-      this._handler?.({ hours: this._hours, minutes: this._minutes });
-    } else {
-      this._showWrong();
+    // The first completed attempt is the answer; wrong word orders count as
+    // a wrong answer instead of silently resetting for a retry.
+    if (!correct) {
+      this.el.querySelectorAll('.word-slot--filled').forEach(el => el.classList.add('word-slot--wrong'));
     }
-  }
-
-  _showWrong() {
-    this.el.querySelectorAll('.word-slot--filled').forEach(el => el.classList.add('word-slot--wrong'));
-    setTimeout(() => {
-      this._placed = new Array(this._correctWords.length).fill(null);
-      this._render();
-    }, 600);
+    this._handler?.({ hours: this._hours, minutes: this._minutes, correct });
   }
 
   _hitTest(x, y) {
@@ -83,6 +76,20 @@ export class SentenceClock {
 
   _bindInteraction(el, item, fromSlot) {
     let lastTap = 0;
+
+    // Keyboard path mirrors the double-tap action: place in the first empty
+    // slot from the tray, or send back to the tray from a slot.
+    el.tabIndex = 0;
+    el.setAttribute('role', 'button');
+    el.setAttribute('aria-label', fromSlot !== null
+      ? `${item.word}, haal uit de zin`
+      : `${item.word}, zet in de zin`);
+    el.addEventListener('keydown', e => {
+      if (e.key !== 'Enter' && e.key !== ' ') return;
+      e.preventDefault();
+      if (fromSlot !== null) this._removeFromSlot(fromSlot);
+      else this._placeInFirstEmpty(item, null);
+    });
 
     el.addEventListener('pointerdown', e => {
       e.preventDefault();

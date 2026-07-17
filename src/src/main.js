@@ -1,5 +1,6 @@
-import { createGameStore, gameKey, getOptionStatus } from './store.js';
-import { MINUTE_LEVELS, HOUR_MODES, getDifficulty } from './difficulties.js';
+import { createGameStore, SESSION_NOMINAL } from './store.js';
+import { getConcept, LADDERS, REPRESENTATIONS } from './concepts.js';
+import { frontierFor } from './mastery.js';
 import { DigitalClock } from './components/DigitalClock.js';
 import { AnalogClock } from './components/AnalogClock.js';
 import { SentenceClock } from './components/SentenceClock.js';
@@ -10,8 +11,20 @@ const app = document.getElementById('app');
 
 let prevToDestroy = [];
 
-const btn = (label, cls, onClick) =>
-  createElement('button', { class: cls, type: 'button', onClick }, label);
+const REP_LABELS = { analog: 'Analoog', digital: 'Digitaal', zin: 'Zin' };
+const REP_SUBLABELS = {
+  analog: 'Klok met wijzers',
+  digital: 'Klok met cijfers',
+  zin: 'Tijd in woorden',
+};
+const REP_IN_WORDS = {
+  analog: 'de analoge klok',
+  digital: 'de digitale klok',
+  zin: 'tijdzinnen',
+};
+
+const btn = (label, cls, onClick, attrs = {}) =>
+  createElement('button', { class: cls, type: 'button', onClick, ...attrs }, label);
 
 function renderNav(opts = {}) {
   const nav = createElement('nav', { class: 'app-nav' });
@@ -20,68 +33,63 @@ function renderNav(opts = {}) {
   return nav;
 }
 
-function scoreCardBtn(label, status, extraCls, onClick) {
-  const cls = [
-    'btn', extraCls,
-    status?.completed ? 'btn--completed' : status ? 'btn--progress' : '',
-  ].filter(Boolean).join(' ');
-  const el = createElement('button', { class: cls, type: 'button', onClick });
-  el.appendChild(createElement('span', { class: 'choice-label' }, label));
-  if (status) {
-    el.appendChild(createElement('span', { class: 'score-badge' }, `${status.percentage}%`));
+function ladderRow(matrix, rep, withLabel = true) {
+  const ladder = LADDERS[rep];
+  const frontier = frontierFor(matrix, rep);
+  const done = ladder.filter(id => matrix[rep][id].mastered).length;
+
+  const row = createElement('div', { class: 'ladder-row' });
+  if (withLabel) row.appendChild(createElement('span', { class: 'ladder-rep' }, REP_LABELS[rep]));
+  const dots = createElement('div', {
+    class: 'ladder-dots',
+    role: 'img',
+    'aria-label': `${REP_LABELS[rep]}: ${done} van ${ladder.length} niveaus behaald`,
+  });
+  for (const id of ladder) {
+    const cls = matrix[rep][id].mastered
+      ? 'ladder-dot ladder-dot--done'
+      : id === frontier ? 'ladder-dot ladder-dot--current' : 'ladder-dot';
+    dots.appendChild(createElement('span', { class: cls, title: getConcept(id).label }));
   }
-  return el;
+  row.appendChild(dots);
+  return row;
 }
 
-function renderModeSelect() {
-  const { scores } = store.get();
+function renderSetup(state) {
+  const { selectedReps, matrix } = state;
   const el = createElement('section', { class: 'screen screen--center' });
   el.appendChild(renderNav());
   el.appendChild(createElement('h2', { class: 'screen-heading' }, 'Wat wil je oefenen?'));
-  const group = createElement('div', { class: 'btn-group' });
-  for (const [label, value] of [['Analoog', 'analoog'], ['Digitaal', 'digitaal'], ['Zin', 'zin'], ['Alles', 'alles']]) {
-    const status = getOptionStatus(scores, value);
-    group.appendChild(scoreCardBtn(label, status, 'btn--choice', () => store.selectMode(value)));
-  }
-  el.appendChild(group);
-  return el;
-}
+  el.appendChild(createElement('p', { class: 'setup-sub' }, 'Kies minstens twee weergaven. Het spel past zich vanzelf aan jouw niveau aan.'));
 
-function renderMinutesSelect() {
-  const { scores, mode } = store.get();
-  const el = createElement('section', { class: 'screen screen--center' });
-  el.appendChild(renderNav({ back: { label: '← Terug', onClick: () => store.goToModeSelect() } }));
-  el.appendChild(createElement('p', { class: 'select-step' }, 'Stap 1 van 2 — Minuten'));
-  el.appendChild(createElement('h2', { class: 'screen-heading' }, 'Kies een niveau'));
-  const grid = createElement('div', { class: 'difficulty-grid' });
-  for (const level of MINUTE_LEVELS) {
-    const status = getOptionStatus(scores, mode, level.id);
-    const card = scoreCardBtn(level.label, status, 'btn--difficulty', () => store.selectMinutesLevel(level.id));
-    card.appendChild(createElement('span', { class: 'difficulty-sub' }, level.sublabel));
+  const grid = createElement('div', { class: 'rep-grid' });
+  REPRESENTATIONS.forEach((rep, i) => {
+    const selected = selectedReps.includes(rep);
+    const card = createElement('button', {
+      class: 'rep-card' + (selected ? ' rep-card--selected' : ''),
+      type: 'button',
+      'aria-pressed': String(selected),
+      onClick: () => {
+        store.toggleRep(rep);
+        // the toggle re-renders the screen synchronously; put focus back
+        app.querySelectorAll('.rep-card')[i]?.focus();
+      },
+    });
+    card.appendChild(createElement('span', { class: 'rep-card__check', 'aria-hidden': 'true' }, selected ? '✓' : ''));
+    card.appendChild(createElement('span', { class: 'choice-label' }, REP_LABELS[rep]));
+    card.appendChild(createElement('span', { class: 'rep-card__sub' }, REP_SUBLABELS[rep]));
+    card.appendChild(ladderRow(matrix, rep, false));
     grid.appendChild(card);
-  }
-  const adaptiveStatus = scores[`${mode}-adaptive`] || null;
-  const adaptiveCard = scoreCardBtn('Adaptief', adaptiveStatus, 'btn--difficulty btn--adaptive', () => store.selectAdaptive());
-  adaptiveCard.appendChild(createElement('span', { class: 'difficulty-sub' }, 'Past zich automatisch aan'));
-  grid.appendChild(adaptiveCard);
+  });
   el.appendChild(grid);
-  return el;
-}
 
-function renderHourModeSelect() {
-  const { scores, mode, minutesLevel } = store.get();
-  const el = createElement('section', { class: 'screen screen--center' });
-  el.appendChild(renderNav({ back: { label: '← Terug', onClick: () => store.goToMinutesSelect() } }));
-  el.appendChild(createElement('p', { class: 'select-step' }, 'Stap 2 van 2 — Uren'));
-  el.appendChild(createElement('h2', { class: 'screen-heading' }, 'Kies een urennotatie'));
-  const group = createElement('div', { class: 'hour-mode-group' });
-  for (const hm of HOUR_MODES) {
-    const status = getOptionStatus(scores, mode, minutesLevel, hm.id);
-    const card = scoreCardBtn(hm.label, status, 'btn--hour-mode', () => store.selectHourMode(hm.id));
-    card.appendChild(createElement('span', { class: 'hour-mode-sub' }, hm.sublabel));
-    group.appendChild(card);
+  const canStart = selectedReps.length >= 2;
+  const start = btn('Start oefenen', 'btn btn--primary btn--lg', () => store.startSession(),
+    canStart ? {} : { disabled: 'disabled' });
+  el.appendChild(start);
+  if (!canStart) {
+    el.appendChild(createElement('p', { class: 'setup-hint' }, 'Kies minstens twee weergaven om te starten.'));
   }
-  el.appendChild(group);
   return el;
 }
 
@@ -95,13 +103,18 @@ function renderGame(state) {
   prevToDestroy.forEach(c => c.destroy());
   prevToDestroy = [];
 
-  const { editTarget, refTarget, referenceTime, editTime, checked, correct, minutesLevel, hourMode, sessionHistory } = state;
-  const diff = getDifficulty(minutesLevel, hourMode);
+  const { editTarget, refTarget, referenceTime, editTime, checked, correct, roundMeta, sessionHistory } = state;
+  const minuteConcept = getConcept(roundMeta.minuteConceptId);
   const isEditable = !checked;
 
   const makeComponent = (target, editable) => {
     if (target === 'analog') {
-      const c = new AnalogClock({ showNumbers: true, editable, minuteEditable: diff.minuteHandFree, snapMinutes: diff.minuteSnap });
+      const c = new AnalogClock({
+        showNumbers: true,
+        editable,
+        minuteEditable: minuteConcept.minuteHandFree,
+        snapMinutes: minuteConcept.minuteSnap,
+      });
       prevToDestroy.push(c);
       return c;
     }
@@ -118,7 +131,10 @@ function renderGame(state) {
 
   if (isEditable) {
     if (editTarget === 'zin') {
-      editComp.onChange(t => { store.setEditTime(t); store.check(); });
+      // On a wrong attempt, let the red shake on the misplaced words paint
+      // before the re-render replaces them; check() guards double calls.
+      editComp.onChange(({ correct: zinCorrect }) =>
+        zinCorrect ? store.check(true) : setTimeout(() => store.check(false), 700));
     } else {
       editComp.onChange(t => store.setEditTime(t));
     }
@@ -134,11 +150,13 @@ function renderGame(state) {
 
   const correctCount = sessionHistory.filter(Boolean).length;
   const total = sessionHistory.length;
-  const scoreText = total === 0 ? 'Nog geen vragen' : `${correctCount}/${total} goed`;
+  const questionNr = total + (checked ? 0 : 1);
+  const nrText = questionNr <= SESSION_NOMINAL ? `Vraag ${questionNr} van ${SESSION_NOMINAL}` : `Vraag ${questionNr}`;
+  const scoreText = total === 0 ? nrText : `${nrText} · ${correctCount}/${total} goed`;
 
   const header = createElement('div', { class: 'game-header' });
   header.appendChild(createElement('span', { class: 'game-score' }, scoreText));
-  header.appendChild(btn('← Terug', 'btn btn--ghost', () => store.goToModeSelect()));
+  header.appendChild(btn('← Stoppen', 'btn btn--ghost', () => store.goToSetup()));
 
   const grid = createElement('div', { class: 'clock-grid' });
   grid.appendChild(makeCell(editComp, editTarget, true));
@@ -150,7 +168,7 @@ function renderGame(state) {
       footer.appendChild(btn('Controleer', 'btn btn--primary', () => store.check()));
     }
   } else {
-    footer.appendChild(createElement('div', { class: 'feedback feedback--' + (correct ? 'correct' : 'wrong') },
+    footer.appendChild(createElement('div', { class: 'feedback feedback--' + (correct ? 'correct' : 'wrong'), role: 'status' },
       correct ? 'Goed zo! ✓' : 'Helaas, dat klopt niet.'));
     footer.appendChild(btn('Volgende', 'btn btn--primary', () => store.nextRound()));
   }
@@ -162,35 +180,66 @@ function renderGame(state) {
   return el;
 }
 
-function renderGameComplete(state) {
-  const { scores, currentGameKey, mode } = state;
-  const entry = scores[currentGameKey] || { percentage: 0 };
-  const modeLabels = { analoog: 'Analoog', digitaal: 'Digitaal', zin: 'Zin', alles: 'Alles' };
-
+function renderCelebration(state) {
+  const { celebration } = state;
+  const concept = getConcept(celebration.conceptId);
   const el = createElement('section', { class: 'screen screen--center screen--complete' });
   el.appendChild(createElement('div', { class: 'complete-icon' }, '🎉'));
-  el.appendChild(createElement('h2', { class: 'screen-heading' }, 'Gefeliciteerd!'));
+  el.appendChild(createElement('h2', { class: 'screen-heading' }, 'Nieuw niveau!'));
   el.appendChild(createElement('p', { class: 'complete-message' },
-    `Je hebt ${modeLabels[mode] || mode} geoefend met ${entry.percentage}% goed.`));
-  el.appendChild(createElement('p', { class: 'complete-sub' }, 'Je beheerst dit onderdeel uitstekend!'));
-  el.appendChild(btn('Ander oefening kiezen', 'btn btn--primary btn--lg', () => store.goToModeSelect()));
+    `Je beheerst nu “${concept.label}” met ${REP_IN_WORDS[celebration.rep]}!`));
+  el.appendChild(btn('Verder oefenen', 'btn btn--primary btn--lg', () => store.continueSession()));
+  return el;
+}
+
+function renderSessionEnd(state) {
+  const { sessionHistory, matrix, selectedReps } = state;
+  const correctCount = sessionHistory.filter(Boolean).length;
+  const total = sessionHistory.length;
+  const pct = total === 0 ? 0 : Math.round(correctCount / total * 100);
+
+  const el = createElement('section', { class: 'screen screen--center screen--complete' });
+  el.appendChild(createElement('div', { class: 'complete-icon' }, '⭐'));
+  el.appendChild(createElement('h2', { class: 'screen-heading' }, 'Goed gedaan!'));
+  el.appendChild(createElement('p', { class: 'complete-message' },
+    `Je had ${correctCount} van de ${total} vragen goed (${pct}%).`));
+
+  const progress = createElement('div', { class: 'ladder-summary' });
+  progress.appendChild(createElement('p', { class: 'complete-sub' }, 'Jouw voortgang:'));
+  for (const rep of selectedReps) {
+    progress.appendChild(ladderRow(matrix, rep));
+  }
+  el.appendChild(progress);
+
+  const actions = createElement('div', { class: 'btn-group' });
+  actions.appendChild(btn('Nog een keer!', 'btn btn--primary btn--lg', () => store.startSession()));
+  actions.appendChild(btn('Andere weergaven kiezen', 'btn btn--ghost', () => store.goToSetup()));
+  el.appendChild(actions);
   return el;
 }
 
 let lastKey = null;
 
+const renderKey = (state) =>
+  `${state.screen}|${state.roundIndex}|${state.checked}|${state.selectedReps.join(',')}`;
+
 store.subscribe(state => {
-  const key = `${state.screen}|${state.roundIndex}|${state.checked}`;
+  const key = renderKey(state);
   if (key === lastKey) return;
   lastKey = key;
   app.innerHTML = '';
-  if      (state.screen === 'mode-select')      app.appendChild(renderModeSelect());
-  else if (state.screen === 'minutes-select')   app.appendChild(renderMinutesSelect());
-  else if (state.screen === 'hour-mode-select') app.appendChild(renderHourModeSelect());
-  else if (state.screen === 'game')             app.appendChild(renderGame(state));
-  else if (state.screen === 'game-complete')    app.appendChild(renderGameComplete(state));
+  if      (state.screen === 'setup')       app.appendChild(renderSetup(state));
+  else if (state.screen === 'game')        app.appendChild(renderGame(state));
+  else if (state.screen === 'celebration') app.appendChild(renderCelebration(state));
+  else if (state.screen === 'session-end') app.appendChild(renderSessionEnd(state));
+
+  // Keep keyboard flow going: land focus on the primary action after an
+  // answer is graded and on the celebration/end screens.
+  if ((state.screen === 'game' && state.checked) || state.screen === 'celebration' || state.screen === 'session-end') {
+    app.querySelector('.btn--primary')?.focus();
+  }
 });
 
 const init = store.get();
-lastKey = `${init.screen}|${init.roundIndex}|${init.checked}`;
-app.appendChild(renderModeSelect());
+lastKey = renderKey(init);
+app.appendChild(renderSetup(init));

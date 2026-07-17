@@ -1,5 +1,7 @@
 import { describe, it, expect, beforeEach } from 'vitest';
-import { createStore, createGameStore, gameKey, getOptionStatus } from '../src/store.js';
+import { createStore, createGameStore, SESSION_NOMINAL, SESSION_CAP } from '../src/store.js';
+import { REPRESENTATIONS } from '../src/concepts.js';
+import { frontierFor } from '../src/mastery.js';
 
 describe('createStore', () => {
   it('returns initial state via get()', () => {
@@ -40,458 +42,228 @@ describe('createStore', () => {
   });
 });
 
-describe('gameKey', () => {
-  it('produces a string key from mode, level, hourMode', () => {
-    expect(gameKey('analoog', 1, '12h')).toBe('analoog-1-12h');
-    expect(gameKey('alles', 4, '24h')).toBe('alles-4-24h');
-  });
-});
+const answerCorrect = (store) => {
+  store.setEditTime(store.get().referenceTime);
+  store.check();
+};
 
-describe('getOptionStatus', () => {
-  it('returns null when no scores exist for mode', () => {
-    expect(getOptionStatus({}, 'analoog')).toBeNull();
-  });
+const answerWrong = (store) => {
+  const { referenceTime } = store.get();
+  store.setEditTime({ hours: referenceTime.hours, minutes: (referenceTime.minutes + 1) % 60 });
+  store.check();
+};
 
-  it('returns completed=true if any config for that mode is completed', () => {
-    const scores = { 'analoog-1-12h': { completed: true, percentage: 95 } };
-    const status = getOptionStatus(scores, 'analoog');
-    expect(status.completed).toBe(true);
-    expect(status.percentage).toBe(95);
-  });
-
-  it('returns completed=false if no config completed', () => {
-    const scores = { 'analoog-2-12h': { completed: false, percentage: 70 } };
-    const status = getOptionStatus(scores, 'analoog');
-    expect(status.completed).toBe(false);
-    expect(status.percentage).toBe(70);
-  });
-
-  it('filters by level when provided', () => {
-    const scores = {
-      'analoog-1-12h': { completed: true, percentage: 95 },
-      'analoog-2-12h': { completed: false, percentage: 60 },
-    };
-    const status = getOptionStatus(scores, 'analoog', 2);
-    expect(status.completed).toBe(false);
-    expect(status.percentage).toBe(60);
-  });
-
-  it('returns exact entry when mode+level+hourMode provided', () => {
-    const scores = { 'digitaal-3-24h': { completed: false, percentage: 50 } };
-    const status = getOptionStatus(scores, 'digitaal', 3, '24h');
-    expect(status.completed).toBe(false);
-    expect(status.percentage).toBe(50);
-  });
-});
+// Move past feedback (and any celebration) to the next playable state.
+const proceed = (store) => {
+  store.nextRound();
+  if (store.get().screen === 'celebration') store.continueSession();
+};
 
 describe('createGameStore', () => {
   beforeEach(() => {
     localStorage.clear();
   });
 
-  it('starts on mode-select screen', () => {
+  it('starts on setup screen with all representations selected', () => {
     const store = createGameStore();
-    expect(store.get().screen).toBe('mode-select');
-  });
-
-  it('goToModeSelect changes screen', () => {
-    const store = createGameStore();
-    store.selectMode('analoog');
-    store.goToModeSelect();
-    expect(store.get().screen).toBe('mode-select');
-  });
-
-  it('selectMode sets mode and goes to minutes-select', () => {
-    const store = createGameStore();
-    store.selectMode('analoog');
     const state = store.get();
-    expect(state.mode).toBe('analoog');
-    expect(state.screen).toBe('minutes-select');
+    expect(state.screen).toBe('setup');
+    expect(state.selectedReps).toEqual(REPRESENTATIONS);
   });
 
-  it('selectMinutesLevel sets minutesLevel and goes to hour-mode-select', () => {
-    const store = createGameStore();
-    store.selectMode('analoog');
-    store.selectMinutesLevel(1);
-    const state = store.get();
-    expect(state.minutesLevel).toBe(1);
-    expect(state.screen).toBe('hour-mode-select');
+  it('removes legacy localStorage keys', () => {
+    localStorage.setItem('klok-oefenen-scores', '{}');
+    localStorage.setItem('klok-oefenen-adaptive', '{}');
+    createGameStore();
+    expect(localStorage.getItem('klok-oefenen-scores')).toBeNull();
+    expect(localStorage.getItem('klok-oefenen-adaptive')).toBeNull();
   });
 
-  it('selectHourMode starts game with correct state', () => {
+  it('toggleRep removes and re-adds a representation', () => {
     const store = createGameStore();
-    store.selectMode('analoog');
-    store.selectMinutesLevel(1);
-    store.selectHourMode('12h');
+    store.toggleRep('zin');
+    expect(store.get().selectedReps).toEqual(['analog', 'digital']);
+    store.toggleRep('zin');
+    expect(store.get().selectedReps).toContain('zin');
+  });
+
+  it('startSession refuses fewer than 2 representations', () => {
+    const store = createGameStore();
+    store.toggleRep('zin');
+    store.toggleRep('digital');
+    store.startSession();
+    expect(store.get().screen).toBe('setup');
+  });
+
+  it('startSession begins a game with a fresh heel_uur frontier round', () => {
+    const store = createGameStore();
+    store.startSession();
     const state = store.get();
     expect(state.screen).toBe('game');
-    expect(state.minutesLevel).toBe(1);
-    expect(state.hourMode).toBe('12h');
     expect(state.roundIndex).toBe(0);
     expect(state.sessionHistory).toEqual([]);
+    expect(state.roundMeta.conceptId).toBe('heel_uur');
+    expect(state.roundMeta.role).toBe('frontier');
+    expect(state.referenceTime.minutes).toBe(0);
+    expect(state.editTime).toEqual({ hours: 1, minutes: 0 });
+    expect(state.editTarget).not.toBe(state.refTarget);
   });
 
-  it('level 1 game starts with editTime 01:00', () => {
+  it('startSession persists the representation selection', () => {
     const store = createGameStore();
-    store.selectMode('analoog');
-    store.selectMinutesLevel(1);
-    store.selectHourMode('12h');
-    expect(store.get().editTime).toEqual({ hours: 1, minutes: 0 });
+    store.toggleRep('zin');
+    store.startSession();
+    const store2 = createGameStore();
+    expect(store2.get().selectedReps).toEqual(['analog', 'digital']);
   });
 
-  it('level 1 game has referenceTime with minutes 0', () => {
+  it('check marks correct and records into the mastery matrix', () => {
     const store = createGameStore();
-    store.selectMode('analoog');
-    for (let i = 0; i < 10; i++) {
-      store.selectMinutesLevel(1);
-      store.selectHourMode('12h');
-      expect(store.get().referenceTime.minutes).toBe(0);
-    }
+    store.startSession();
+    const { roundMeta } = store.get();
+    answerCorrect(store);
+    const state = store.get();
+    expect(state.checked).toBe(true);
+    expect(state.correct).toBe(true);
+    expect(state.sessionHistory).toEqual([true]);
+    expect(state.matrix[roundMeta.attributionRep][roundMeta.conceptId].window).toEqual([true]);
   });
 
-  it('level 1 + 24h game has referenceTime hours 1-23', () => {
+  it('check marks incorrect and enqueues a revisit', () => {
     const store = createGameStore();
-    store.selectMode('analoog');
-    for (let i = 0; i < 20; i++) {
-      store.selectMinutesLevel(1);
-      store.selectHourMode('24h');
-      const { hours } = store.get().referenceTime;
-      expect(hours).toBeGreaterThanOrEqual(1);
-      expect(hours).toBeLessThanOrEqual(23);
-    }
+    store.startSession();
+    answerWrong(store);
+    const state = store.get();
+    expect(state.correct).toBe(false);
+    expect(state.sessionHistory).toEqual([false]);
+    expect(state.revisitQueue).toHaveLength(1);
+    expect(state.roundsSinceEnqueue).toBe(0);
   });
 
-  it('nextRound increments roundIndex', () => {
+  it('persists the matrix so a new store resumes progress', () => {
     const store = createGameStore();
-    store.selectMode('digitaal');
-    store.selectMinutesLevel(4);
-    store.selectHourMode('12h');
-    store.nextRound();
-    expect(store.get().roundIndex).toBe(1);
+    store.startSession();
+    answerCorrect(store);
+    const store2 = createGameStore();
+    const { matrix } = store2.get();
+    const rep = store.get().roundMeta.attributionRep;
+    expect(matrix[rep].heel_uur.window).toEqual([true]);
   });
 
-  it('check marks correct when times match', () => {
+  it('mastering a concept triggers the celebration screen, then continues', () => {
     const store = createGameStore();
-    store.selectMode('analoog');
-    store.selectMinutesLevel(4);
-    store.selectHourMode('12h');
-    const { referenceTime } = store.get();
-    store.setEditTime(referenceTime);
-    store.check();
-    expect(store.get().correct).toBe(true);
-    expect(store.get().checked).toBe(true);
-  });
-
-  it('check accepts analog-equivalent 24h time (14:00 matches 2:00)', () => {
-    const store = createGameStore();
-    store.selectMode('digitaal');
-    store.selectMinutesLevel(1);
-    store.selectHourMode('24h');
-    const { referenceTime } = store.get();
-    const analog12h = { hours: referenceTime.hours % 12 || 12, minutes: referenceTime.minutes };
-    store.setEditTime(analog12h);
-    store.check();
-    expect(store.get().correct).toBe(true);
-  });
-
-  it('check marks incorrect when times differ', () => {
-    const store = createGameStore();
-    store.selectMode('analoog');
-    store.selectMinutesLevel(4);
-    store.selectHourMode('12h');
-    const { referenceTime } = store.get();
-    const refH = referenceTime.hours % 12;
-    const wrongTime = { hours: refH === 1 ? 2 : 1, minutes: referenceTime.minutes === 0 ? 5 : 0 };
-    store.setEditTime(wrongTime);
-    store.check();
-    expect(store.get().checked).toBe(true);
-    expect(store.get().correct).toBe(false);
-  });
-
-  it('check records answer in sessionHistory', () => {
-    const store = createGameStore();
-    store.selectMode('analoog');
-    store.selectMinutesLevel(4);
-    store.selectHourMode('12h');
-    const { referenceTime } = store.get();
-    store.setEditTime(referenceTime);
-    store.check();
-    expect(store.get().sessionHistory).toEqual([true]);
-  });
-
-  it('check updates scores with percentage', () => {
-    const store = createGameStore();
-    store.selectMode('analoog');
-    store.selectMinutesLevel(1);
-    store.selectHourMode('12h');
-    const { referenceTime } = store.get();
-    store.setEditTime(referenceTime);
-    store.check();
-    const { scores, currentGameKey } = store.get();
-    expect(scores[currentGameKey]).toBeDefined();
-    expect(scores[currentGameKey].percentage).toBe(100);
-  });
-
-  it('game completes after 20 answers with 90%+ correct', () => {
-    const store = createGameStore();
-    store.selectMode('analoog');
-    store.selectMinutesLevel(1);
-    store.selectHourMode('12h');
-
-    for (let i = 0; i < 20; i++) {
-      const { referenceTime } = store.get();
-      store.setEditTime(referenceTime);
-      store.check();
-      if (store.get().screen !== 'game-complete') store.nextRound();
-    }
-    expect(store.get().screen).toBe('game-complete');
-  });
-
-  it('game does not complete with fewer than 20 answers', () => {
-    const store = createGameStore();
-    store.selectMode('analoog');
-    store.selectMinutesLevel(1);
-    store.selectHourMode('12h');
-
-    for (let i = 0; i < 19; i++) {
-      const { referenceTime } = store.get();
-      store.setEditTime(referenceTime);
-      store.check();
-      store.nextRound();
-    }
-    expect(store.get().screen).toBe('game');
-  });
-
-  it('completed game persists completed=true in scores', () => {
-    const store = createGameStore();
-    store.selectMode('analoog');
-    store.selectMinutesLevel(1);
-    store.selectHourMode('12h');
-
-    for (let i = 0; i < 20; i++) {
-      const { referenceTime } = store.get();
-      store.setEditTime(referenceTime);
-      store.check();
-      if (store.get().screen !== 'game-complete') store.nextRound();
-    }
-    const { scores, currentGameKey } = store.get();
-    expect(scores[currentGameKey].completed).toBe(true);
-  });
-
-  it('goToMinutesSelect changes screen', () => {
-    const store = createGameStore();
-    store.selectMode('alles');
-    store.goToMinutesSelect();
-    expect(store.get().screen).toBe('minutes-select');
-  });
-
-  it('editTarget for analoog mode is always analog', () => {
-    const store = createGameStore();
-    store.selectMode('analoog');
-    store.selectMinutesLevel(4);
-    store.selectHourMode('12h');
-    expect(store.get().editTarget).toBe('analog');
-    store.nextRound();
-    expect(store.get().editTarget).toBe('analog');
-  });
-
-  it('editTarget for alles mode is one of the three component types', () => {
-    const store = createGameStore();
-    store.selectMode('alles');
-    store.selectMinutesLevel(4);
-    store.selectHourMode('12h');
-    const valid = ['analog', 'digital', 'zin'];
-    expect(valid).toContain(store.get().editTarget);
-    store.nextRound();
-    expect(valid).toContain(store.get().editTarget);
-  });
-
-  it('editTarget and refTarget are always different', () => {
-    const store = createGameStore();
-    for (const mode of ['analoog', 'digitaal', 'zin', 'alles']) {
-      store.selectMode(mode);
-      store.selectMinutesLevel(4);
-      store.selectHourMode('12h');
-      for (let i = 0; i < 5; i++) {
-        const { editTarget, refTarget } = store.get();
-        expect(editTarget).not.toBe(refTarget);
+    store.toggleRep('zin'); // analog + digital only, fewer reps to master
+    store.startSession();
+    let celebrated = false;
+    for (let i = 0; i < 15 && !celebrated; i++) {
+      answerCorrect(store);
+      if (store.get().pendingMastery) {
+        const { pendingMastery } = store.get();
+        expect(pendingMastery.type).toBe('mastered');
+        expect(pendingMastery.conceptId).toBe('heel_uur');
+        store.nextRound();
+        expect(store.get().screen).toBe('celebration');
+        expect(store.get().celebration.conceptId).toBe('heel_uur');
+        store.continueSession();
+        expect(store.get().screen).toBe('game');
+        celebrated = true;
+      } else {
         store.nextRound();
       }
     }
+    expect(celebrated).toBe(true);
   });
 
-  it('editTarget for zin mode is always zin', () => {
+  it('mastery updates the frontier for the mastered representation', () => {
     const store = createGameStore();
-    store.selectMode('zin');
-    store.selectMinutesLevel(4);
-    store.selectHourMode('12h');
-    expect(store.get().editTarget).toBe('zin');
-    store.nextRound();
-    expect(store.get().editTarget).toBe('zin');
+    store.toggleRep('zin');
+    store.startSession();
+    for (let i = 0; i < 30 && store.get().screen !== 'session-end'; i++) {
+      answerCorrect(store);
+      proceed(store);
+    }
+    const { matrix } = store.get();
+    const advanced = ['analog', 'digital'].some(rep => frontierFor(matrix, rep) !== 'heel_uur');
+    expect(advanced).toBe(true);
   });
 
-  it('refTarget for analoog mode is digital or zin', () => {
+  it('session ends on a high note at the nominal length', () => {
     const store = createGameStore();
-    store.selectMode('analoog');
-    store.selectMinutesLevel(4);
-    store.selectHourMode('12h');
-    expect(['digital', 'zin']).toContain(store.get().refTarget);
+    store.startSession();
+    for (let i = 0; i < SESSION_NOMINAL; i++) {
+      answerCorrect(store);
+      proceed(store);
+    }
+    expect(store.get().screen).toBe('session-end');
+    expect(store.get().sessionHistory).toHaveLength(SESSION_NOMINAL);
   });
 
-  it('refTarget for digitaal mode is analog or zin', () => {
+  it('session continues past nominal length until a correct answer', () => {
     const store = createGameStore();
-    store.selectMode('digitaal');
-    store.selectMinutesLevel(4);
-    store.selectHourMode('12h');
-    expect(['analog', 'zin']).toContain(store.get().refTarget);
+    store.startSession();
+    for (let i = 0; i < SESSION_NOMINAL - 1; i++) {
+      answerCorrect(store);
+      proceed(store);
+    }
+    answerWrong(store); // answer #20 wrong → keep going
+    proceed(store);
+    expect(store.get().screen).toBe('game');
+    answerCorrect(store); // answer #21 correct → end
+    proceed(store);
+    expect(store.get().screen).toBe('session-end');
+    expect(store.get().sessionHistory).toHaveLength(SESSION_NOMINAL + 1);
   });
 
-  it('refTarget for zin mode is analog or digital', () => {
+  it('session hard-caps even without a final correct answer', () => {
     const store = createGameStore();
-    store.selectMode('zin');
-    store.selectMinutesLevel(4);
-    store.selectHourMode('12h');
-    expect(['analog', 'digital']).toContain(store.get().refTarget);
+    store.startSession();
+    for (let i = 0; i < SESSION_CAP; i++) {
+      if (store.get().screen !== 'game') break;
+      answerWrong(store);
+      proceed(store);
+    }
+    expect(store.get().screen).toBe('session-end');
+    expect(store.get().sessionHistory).toHaveLength(SESSION_CAP);
   });
 
-  describe('adaptive mode', () => {
-    it('selectAdaptive starts at level 0 (minuteLevel 1, hourMode 12h)', () => {
-      const store = createGameStore();
-      store.selectMode('analoog');
-      store.selectAdaptive();
-      const state = store.get();
-      expect(state.adaptive).toBe(true);
-      expect(state.adaptiveLevel).toBe(0);
-      expect(state.minutesLevel).toBe(1);
-      expect(state.hourMode).toBe('12h');
-    });
-
-    it('selectAdaptive sets screen to game with correct game key', () => {
-      const store = createGameStore();
-      store.selectMode('analoog');
-      store.selectAdaptive();
-      const state = store.get();
-      expect(state.screen).toBe('game');
-      expect(state.currentGameKey).toBe('analoog-adaptive');
-    });
-
-    it('correct answer in adaptive mode advances level by 2', () => {
-      const store = createGameStore();
-      store.selectMode('analoog');
-      store.selectAdaptive();
-      const { referenceTime } = store.get();
-      store.setEditTime(referenceTime);
-      store.check();
-      expect(store.get().adaptiveLevel).toBe(2);
-    });
-
-    it('incorrect answer in adaptive mode decreases level by 1', () => {
-      const store = createGameStore();
-      store.selectMode('analoog');
-      store.selectAdaptive();
-      // Start at level 2 by answering correctly once first
-      const { referenceTime: rt1 } = store.get();
-      store.setEditTime(rt1);
-      store.check();
-      store.nextRound();
-      // Now answer incorrectly
-      const { referenceTime } = store.get();
-      const wrongTime = { hours: referenceTime.hours === 1 ? 2 : 1, minutes: 30 };
-      store.setEditTime(wrongTime);
-      store.check();
-      expect(store.get().adaptiveLevel).toBe(1);
-    });
-
-    it('adaptive level is clamped at max (7)', () => {
-      const store = createGameStore();
-      store.selectMode('analoog');
-      store.selectAdaptive();
-      // Answer correctly 4 times to try to go past 7
-      for (let i = 0; i < 4; i++) {
-        const { referenceTime } = store.get();
-        store.setEditTime(referenceTime);
-        store.check();
-        if (store.get().screen !== 'game-complete') store.nextRound();
-      }
-      expect(store.get().adaptiveLevel).toBeLessThanOrEqual(7);
-    });
-
-    it('adaptive level is floored at 0 when already at minimum', () => {
-      const store = createGameStore();
-      store.selectMode('analoog');
-      store.selectAdaptive();
-      const { referenceTime } = store.get();
-      const wrongTime = { hours: referenceTime.hours === 1 ? 2 : 1, minutes: 30 };
-      store.setEditTime(wrongTime);
-      store.check();
-      expect(store.get().adaptiveLevel).toBe(0);
-    });
-
-    it('minutesLevel and hourMode update after adaptive level change', () => {
-      const store = createGameStore();
-      store.selectMode('analoog');
-      store.selectAdaptive();
-      const { referenceTime } = store.get();
-      store.setEditTime(referenceTime);
-      store.check();
-      const state = store.get();
-      // level 2 => ADAPTIVE_LEVELS[2] = { minuteLevelId: 2, hourModeId: '12h' }
-      expect(state.minutesLevel).toBe(2);
-      expect(state.hourMode).toBe('12h');
-    });
-
-    it('adaptive level is persisted to localStorage and restored on next session', () => {
-      const store1 = createGameStore();
-      store1.selectMode('digitaal');
-      store1.selectAdaptive();
-      const { referenceTime } = store1.get();
-      store1.setEditTime(referenceTime);
-      store1.check(); // level advances to 2
-
-      const store2 = createGameStore();
-      store2.selectMode('digitaal');
-      store2.selectAdaptive();
-      expect(store2.get().adaptiveLevel).toBe(2);
-    });
-
-    it('adaptive persistence is per game mode', () => {
-      const store1 = createGameStore();
-      store1.selectMode('analoog');
-      store1.selectAdaptive();
-      const { referenceTime } = store1.get();
-      store1.setEditTime(referenceTime);
-      store1.check(); // analoog advances to 2
-
-      const store2 = createGameStore();
-      store2.selectMode('digitaal');
-      store2.selectAdaptive();
-      expect(store2.get().adaptiveLevel).toBe(0); // different mode starts fresh
-    });
-  });
-
-  it('zin mode: check marks correct when editTime matches referenceTime', () => {
+  it('revisit queue replays a missed problem after two rounds', () => {
     const store = createGameStore();
-    store.selectMode('zin');
-    store.selectMinutesLevel(4);
-    store.selectHourMode('12h');
-    const { referenceTime } = store.get();
-    store.setEditTime(referenceTime);
-    store.check();
-    expect(store.get().checked).toBe(true);
-    expect(store.get().correct).toBe(true);
+    store.startSession();
+    answerWrong(store);
+    const missed = store.get().revisitQueue[0];
+    proceed(store); // round 1 after miss (fresh)
+    answerCorrect(store);
+    proceed(store); // round 2 after miss (fresh)
+    answerCorrect(store);
+    proceed(store); // now the revisit is due
+    const state = store.get();
+    expect(state.revisitQueue).toHaveLength(0);
+    expect(state.referenceTime).toEqual(missed.referenceTime);
+    expect(state.editTarget).toBe(missed.editTarget);
+    expect(state.refTarget).toBe(missed.refTarget);
   });
 
-  it('zin mode: check marks incorrect when editTime does not match referenceTime', () => {
+  it('goToSetup resets the session but keeps the matrix', () => {
     const store = createGameStore();
-    store.selectMode('zin');
-    store.selectMinutesLevel(4);
-    store.selectHourMode('12h');
-    const { referenceTime } = store.get();
-    const refH = referenceTime.hours % 12;
-    const wrongTime = { hours: refH === 1 ? 2 : 1, minutes: referenceTime.minutes === 0 ? 5 : 0 };
-    store.setEditTime(wrongTime);
-    store.check();
-    expect(store.get().checked).toBe(true);
-    expect(store.get().correct).toBe(false);
+    store.startSession();
+    answerCorrect(store);
+    store.goToSetup();
+    const state = store.get();
+    expect(state.screen).toBe('setup');
+    expect(state.sessionHistory).toEqual([]);
+    const rep = Object.keys(state.matrix).find(r => state.matrix[r].heel_uur.window.length > 0);
+    expect(rep).toBeDefined();
+  });
+
+  it('editTarget and refTarget are always different across rounds', () => {
+    const store = createGameStore();
+    store.startSession();
+    for (let i = 0; i < 10; i++) {
+      const { editTarget, refTarget, screen } = store.get();
+      if (screen !== 'game') break;
+      expect(editTarget).not.toBe(refTarget);
+      answerCorrect(store);
+      proceed(store);
+    }
   });
 });
