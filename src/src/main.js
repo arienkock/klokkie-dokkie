@@ -63,20 +63,24 @@ function renderSetup(state) {
   el.appendChild(createElement('p', { class: 'setup-sub' }, 'Kies minstens twee weergaven. Het spel past zich vanzelf aan jouw niveau aan.'));
 
   const grid = createElement('div', { class: 'rep-grid' });
-  for (const rep of REPRESENTATIONS) {
+  REPRESENTATIONS.forEach((rep, i) => {
     const selected = selectedReps.includes(rep);
     const card = createElement('button', {
       class: 'rep-card' + (selected ? ' rep-card--selected' : ''),
       type: 'button',
       'aria-pressed': String(selected),
-      onClick: () => store.toggleRep(rep),
+      onClick: () => {
+        store.toggleRep(rep);
+        // the toggle re-renders the screen synchronously; put focus back
+        app.querySelectorAll('.rep-card')[i]?.focus();
+      },
     });
     card.appendChild(createElement('span', { class: 'rep-card__check', 'aria-hidden': 'true' }, selected ? '✓' : ''));
     card.appendChild(createElement('span', { class: 'choice-label' }, REP_LABELS[rep]));
     card.appendChild(createElement('span', { class: 'rep-card__sub' }, REP_SUBLABELS[rep]));
     card.appendChild(ladderRow(matrix, rep, false));
     grid.appendChild(card);
-  }
+  });
   el.appendChild(grid);
 
   const canStart = selectedReps.length >= 2;
@@ -164,7 +168,7 @@ function renderGame(state) {
       footer.appendChild(btn('Controleer', 'btn btn--primary', () => store.check()));
     }
   } else {
-    footer.appendChild(createElement('div', { class: 'feedback feedback--' + (correct ? 'correct' : 'wrong') },
+    footer.appendChild(createElement('div', { class: 'feedback feedback--' + (correct ? 'correct' : 'wrong'), role: 'status' },
       correct ? 'Goed zo! ✓' : 'Helaas, dat klopt niet.'));
     footer.appendChild(btn('Volgende', 'btn btn--primary', () => store.nextRound()));
   }
@@ -228,6 +232,12 @@ store.subscribe(state => {
   else if (state.screen === 'game')        app.appendChild(renderGame(state));
   else if (state.screen === 'celebration') app.appendChild(renderCelebration(state));
   else if (state.screen === 'session-end') app.appendChild(renderSessionEnd(state));
+
+  // Keep keyboard flow going: land focus on the primary action after an
+  // answer is graded and on the celebration/end screens.
+  if ((state.screen === 'game' && state.checked) || state.screen === 'celebration' || state.screen === 'session-end') {
+    app.querySelector('.btn--primary')?.focus();
+  }
 });
 
 const init = store.get();

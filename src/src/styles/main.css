@@ -170,6 +170,12 @@ input[type="checkbox"] {
   cursor: grab;
 }
 
+@media (pointer: coarse) {
+  .hand-hit {
+    stroke-width: 28;
+  }
+}
+
 .hand-hit:active {
   cursor: grabbing;
 }
@@ -266,6 +272,20 @@ input[type="checkbox"] {
 
 .btn:hover { opacity: 0.85; }
 .btn:active { opacity: 0.7; }
+
+.btn,
+.rep-card {
+  touch-action: manipulation;
+}
+
+.btn:focus-visible,
+.rep-card:focus-visible,
+.digit-btn:focus-visible,
+.word-block:focus-visible,
+.word-slot--filled:focus-visible {
+  outline: 3px solid #1a73e8;
+  outline-offset: 2px;
+}
 
 .btn--lg {
   font-size: 16px;
@@ -375,13 +395,14 @@ input[type="checkbox"] {
 
 .digit-btn {
   font-family: var(--font);
-  font-size: 11px;
+  font-size: 13px;
   background: none;
   border: 1px solid var(--color-border);
   border-radius: 4px;
-  width: 32px;
-  height: 28px;
+  width: 44px;
+  height: 40px;
   cursor: pointer;
+  touch-action: manipulation;
   color: var(--color-text-muted);
   display: flex;
   align-items: center;
@@ -421,7 +442,8 @@ input[type="checkbox"] {
   font-size: 13px;
   font-family: var(--font);
   cursor: pointer;
-  padding: 8px 4px;
+  padding: 12px 10px;
+  min-height: 44px;
   transition: color 0.15s;
 }
 
@@ -598,7 +620,7 @@ input[type="checkbox"] {
 
 .word-slot {
   min-width: 72px;
-  height: 40px;
+  height: 44px;
   border: 2px dashed var(--color-border);
   border-radius: 6px;
   display: flex;
@@ -641,6 +663,12 @@ input[type="checkbox"] {
   75%       { transform: translateX(5px); }
 }
 
+@media (prefers-reduced-motion: reduce) {
+  .word-slot--wrong {
+    animation: none;
+  }
+}
+
 .word-tray {
   display: flex;
   flex-wrap: wrap;
@@ -653,7 +681,7 @@ input[type="checkbox"] {
 }
 
 .word-block {
-  height: 40px;
+  height: 44px;
   padding: 0 14px;
   background: var(--color-surface);
   border: 1px solid var(--color-border);

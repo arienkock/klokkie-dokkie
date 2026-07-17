@@ -34,7 +34,14 @@ export class AnalogClock {
   }
 
   _build() {
-    this.el = svgEl('svg', { viewBox: '0 0 200 200', class: 'analog-clock' });
+    this.el = svgEl('svg', {
+      viewBox: '0 0 200 200',
+      class: 'analog-clock',
+      role: 'img',
+      'aria-label': this._editable
+        ? 'Analoge klok, versleep de wijzers om de tijd in te stellen'
+        : 'Analoge klok',
+    });
 
     this.el.appendChild(svgEl('circle', { cx: CX, cy: CY, r: R, class: 'clock-face' }));
     this.el.appendChild(svgEl('circle', { cx: CX, cy: CY, r: R, class: 'clock-rim' }));

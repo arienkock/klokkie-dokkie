@@ -77,6 +77,20 @@ export class SentenceClock {
   _bindInteraction(el, item, fromSlot) {
     let lastTap = 0;
 
+    // Keyboard path mirrors the double-tap action: place in the first empty
+    // slot from the tray, or send back to the tray from a slot.
+    el.tabIndex = 0;
+    el.setAttribute('role', 'button');
+    el.setAttribute('aria-label', fromSlot !== null
+      ? `${item.word}, haal uit de zin`
+      : `${item.word}, zet in de zin`);
+    el.addEventListener('keydown', e => {
+      if (e.key !== 'Enter' && e.key !== ' ') return;
+      e.preventDefault();
+      if (fromSlot !== null) this._removeFromSlot(fromSlot);
+      else this._placeInFirstEmpty(item, null);
+    });
+
     el.addEventListener('pointerdown', e => {
       e.preventDefault();
       const now = Date.now();

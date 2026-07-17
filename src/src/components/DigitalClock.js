@@ -10,6 +10,10 @@ export class DigitalClock {
     this._handler = null;
     this.el = document.createElement('div');
     this.el.className = 'digital-clock' + (editable ? ' digital-clock--editable' : '');
+    if (editable) {
+      this.el.setAttribute('role', 'group');
+      this.el.setAttribute('aria-label', 'Digitale klok, stel de tijd in');
+    }
     this._build();
   }
 
