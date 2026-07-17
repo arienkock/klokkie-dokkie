@@ -1,4 +1,5 @@
-import { getDifficulty, MINUTE_LEVELS, HOUR_MODES, ADAPTIVE_LEVELS } from './difficulties.js';
+import { getConcept, REPRESENTATIONS } from './concepts.js';
+import { createMatrix, normalizeMatrix, pickRound, recordAnswer } from './mastery.js';
 import { timesEqualAnalog } from './utils/time.js';
 
 export function createStore(initial) {
@@ -18,74 +19,35 @@ export function createStore(initial) {
   };
 }
 
-const LS_KEY = 'klok-oefenen-scores';
-const LS_ADAPTIVE_KEY = 'klok-oefenen-adaptive';
+const MATRIX_KEY = 'klokkie-mastery-v1';
+const REPS_KEY = 'klokkie-reps-v1';
+const LEGACY_KEYS = ['klok-oefenen-scores', 'klok-oefenen-adaptive'];
 
-const loadScores = () => {
-  try { return JSON.parse(localStorage.getItem(LS_KEY) || '{}'); }
-  catch { return {}; }
+const loadMatrix = () => {
+  try { return normalizeMatrix(JSON.parse(localStorage.getItem(MATRIX_KEY))); }
+  catch { return createMatrix(); }
 };
 
-const saveScores = (scores) => {
-  try { localStorage.setItem(LS_KEY, JSON.stringify(scores)); }
+const saveMatrix = (matrix) => {
+  try { localStorage.setItem(MATRIX_KEY, JSON.stringify(matrix)); }
   catch {}
 };
 
-const loadAdaptiveLevels = () => {
-  try { return JSON.parse(localStorage.getItem(LS_ADAPTIVE_KEY) || '{}'); }
-  catch { return {}; }
-};
-
-const saveAdaptiveLevel = (mode, level) => {
+const loadReps = () => {
   try {
-    const all = loadAdaptiveLevels();
-    localStorage.setItem(LS_ADAPTIVE_KEY, JSON.stringify({ ...all, [mode]: level }));
-  } catch {}
+    const reps = JSON.parse(localStorage.getItem(REPS_KEY));
+    const valid = Array.isArray(reps) ? reps.filter(r => REPRESENTATIONS.includes(r)) : [];
+    return valid.length >= 2 ? valid : [...REPRESENTATIONS];
+  } catch { return [...REPRESENTATIONS]; }
 };
 
-export const gameKey = (mode, minutesLevel, hourMode) => `${mode}-${minutesLevel}-${hourMode}`;
-
-export const getOptionStatus = (scores, mode, minutesLevel = null, hourMode = null) => {
-  const levels = minutesLevel !== null ? [minutesLevel] : MINUTE_LEVELS.map(l => l.id);
-  const hours  = hourMode   !== null ? [hourMode]   : HOUR_MODES.map(m => m.id);
-  const entries = levels.flatMap(l => hours.map(h => scores[gameKey(mode, l, h)])).filter(Boolean);
-  if (!entries.length) return null;
-  return {
-    completed:  entries.some(e => e.completed),
-    percentage: Math.max(...entries.map(e => e.percentage)),
-  };
+const saveReps = (reps) => {
+  try { localStorage.setItem(REPS_KEY, JSON.stringify(reps)); }
+  catch {}
 };
 
-const pick = arr => arr[Math.floor(Math.random() * arr.length)];
-
-const PAIRINGS = [['analog', 'digital'], ['analog', 'zin'], ['digital', 'zin']];
-
-const freshTargets = (mode) => {
-  if (mode === 'analoog')  return { editTarget: 'analog',  refTarget: pick(['digital', 'zin']) };
-  if (mode === 'digitaal') return { editTarget: 'digital', refTarget: pick(['analog',  'zin']) };
-  if (mode === 'zin')      return { editTarget: 'zin',     refTarget: pick(['analog',  'digital']) };
-  const [a, b] = PAIRINGS[Math.floor(Math.random() * 3)];
-  return Math.random() < 0.5 ? { editTarget: a, refTarget: b } : { editTarget: b, refTarget: a };
-};
-
-const freshRound = (mode, minutesLevel, hourMode) => {
-  const diff = getDifficulty(minutesLevel, hourMode);
-  return {
-    referenceTime: diff.randomTime(),
-    editTime: { ...diff.initialEditTime },
-    ...freshTargets(mode),
-    checked: false,
-    correct: false,
-  };
-};
-
-const rollingPercentage = (history) => {
-  const w = history.slice(-20);
-  return w.length === 0 ? 0 : Math.round(w.filter(Boolean).length / w.length * 100);
-};
-
-const isComplete = (history) =>
-  history.length >= 20 && history.slice(-20).filter(Boolean).length >= 18;
+export const SESSION_NOMINAL = 20; // aim for this many rounds…
+export const SESSION_CAP = 25;     // …but never more than this many
 
 const REVISIT_QUEUE_MAX = 5;
 const REVISIT_AFTER = 2;
@@ -96,103 +58,145 @@ const enqueueRevisit = (queue, problem) => {
 };
 
 export function createGameStore() {
+  LEGACY_KEYS.forEach(k => { try { localStorage.removeItem(k); } catch {} });
+
   const store = createStore({
-    screen: 'mode-select',
-    mode: null,
-    minutesLevel: null,
-    hourMode: null,
-    adaptive: false,
-    adaptiveLevel: 0,
-    currentGameKey: null,
-    sessionHistory: [],
+    screen: 'setup',
+    selectedReps: loadReps(),
+    matrix: loadMatrix(),
     roundIndex: 0,
+    sessionHistory: [],
+    revisitQueue: [],
+    roundsSinceEnqueue: 0,
+    pendingMastery: null,
+    celebration: null,
     editTarget: 'digital',
     refTarget: 'analog',
+    roundMeta: null,
     referenceTime: { hours: 12, minutes: 0 },
     editTime: { hours: 12, minutes: 0 },
     checked: false,
     correct: false,
-    scores: loadScores(),
-    revisitQueue: [],
-    roundsSinceEnqueue: 0,
   });
+
+  const freshRound = (matrix, selectedReps) => {
+    const r = pickRound(matrix, selectedReps);
+    return {
+      editTarget: r.editTarget,
+      refTarget: r.refTarget,
+      roundMeta: {
+        attributionRep: r.attributionRep,
+        conceptId: r.conceptId,
+        minuteConceptId: r.minuteConceptId,
+        role: r.role,
+      },
+      referenceTime: r.time,
+      editTime: { ...getConcept(r.minuteConceptId).initialEditTime },
+      checked: false,
+      correct: false,
+    };
+  };
+
+  const revisitRound = (problem) => ({
+    ...problem,
+    editTime: { ...getConcept(problem.roundMeta.minuteConceptId).initialEditTime },
+    checked: false,
+    correct: false,
+  });
+
+  const advance = () => {
+    const { matrix, selectedReps, sessionHistory, roundIndex, revisitQueue, roundsSinceEnqueue } = store.get();
+    const answered = sessionHistory.length;
+    const endedOnHighNote = answered >= SESSION_NOMINAL && sessionHistory[answered - 1] === true;
+    if (answered >= SESSION_CAP || endedOnHighNote) {
+      store.set({ screen: 'session-end' });
+      return;
+    }
+    const useRevisit = revisitQueue.length > 0 && roundsSinceEnqueue >= REVISIT_AFTER;
+    const round = useRevisit ? revisitRound(revisitQueue[0]) : freshRound(matrix, selectedReps);
+    store.set({
+      screen: 'game',
+      roundIndex: roundIndex + 1,
+      revisitQueue: useRevisit ? revisitQueue.slice(1) : revisitQueue,
+      roundsSinceEnqueue: useRevisit ? 0 : roundsSinceEnqueue + 1,
+      ...round,
+    });
+  };
 
   return {
     get: store.get,
     subscribe: store.subscribe,
-    goToModeSelect: () => store.set({ screen: 'mode-select', currentGameKey: null, sessionHistory: [], revisitQueue: [], roundsSinceEnqueue: 0, adaptive: false }),
-    goToMinutesSelect: () => store.set({ screen: 'minutes-select' }),
-    selectMode: (mode) => store.set({ mode, screen: 'minutes-select' }),
-    selectMinutesLevel: (minutesLevel) => store.set({ minutesLevel, screen: 'hour-mode-select' }),
-    selectHourMode: (hourMode) => {
-      const { mode, minutesLevel } = store.get();
-      const key = gameKey(mode, minutesLevel, hourMode);
-      store.set({ hourMode, adaptive: false, screen: 'game', roundIndex: 0, currentGameKey: key, sessionHistory: [], revisitQueue: [], roundsSinceEnqueue: 0, ...freshRound(mode, minutesLevel, hourMode) });
+
+    toggleRep: (rep) => {
+      const { selectedReps } = store.get();
+      const next = selectedReps.includes(rep)
+        ? selectedReps.filter(r => r !== rep)
+        : [...selectedReps, rep];
+      store.set({ selectedReps: next });
     },
-    selectAdaptive: () => {
-      const { mode } = store.get();
-      const savedLevel = (loadAdaptiveLevels()[mode] ?? 0);
-      const adl = ADAPTIVE_LEVELS[savedLevel];
+
+    goToSetup: () => store.set({
+      screen: 'setup',
+      roundIndex: 0,
+      sessionHistory: [],
+      revisitQueue: [],
+      roundsSinceEnqueue: 0,
+      pendingMastery: null,
+      celebration: null,
+    }),
+
+    startSession: () => {
+      const { selectedReps, matrix } = store.get();
+      if (selectedReps.length < 2) return;
+      saveReps(selectedReps);
       store.set({
-        adaptive: true,
-        adaptiveLevel: savedLevel,
-        minutesLevel: adl.minuteLevelId,
-        hourMode: adl.hourModeId,
         screen: 'game',
         roundIndex: 0,
-        currentGameKey: `${mode}-adaptive`,
         sessionHistory: [],
         revisitQueue: [],
         roundsSinceEnqueue: 0,
-        ...freshRound(mode, adl.minuteLevelId, adl.hourModeId),
+        pendingMastery: null,
+        celebration: null,
+        ...freshRound(matrix, selectedReps),
       });
     },
-    nextRound: () => {
-      const { mode, roundIndex, minutesLevel, hourMode, revisitQueue, roundsSinceEnqueue } = store.get();
-      const diff = getDifficulty(minutesLevel, hourMode);
-      const useRevisit = revisitQueue.length > 0 && roundsSinceEnqueue >= REVISIT_AFTER;
-      const [revisitProblem, ...remainingQueue] = revisitQueue;
-      const round = useRevisit
-        ? { ...revisitProblem, editTime: { ...diff.initialEditTime }, checked: false, correct: false }
-        : freshRound(mode, minutesLevel, hourMode);
-      store.set({
-        roundIndex: roundIndex + 1,
-        revisitQueue: useRevisit ? remainingQueue : revisitQueue,
-        roundsSinceEnqueue: useRevisit ? 0 : roundsSinceEnqueue + 1,
-        ...round,
-      });
-    },
+
+    setEditTime: (time) => store.set({ editTime: time }),
+
     check: () => {
-      const { referenceTime, editTime, scores, currentGameKey, sessionHistory, revisitQueue, editTarget, refTarget, adaptive, adaptiveLevel, mode } = store.get();
+      const {
+        matrix, referenceTime, editTime, roundMeta,
+        sessionHistory, revisitQueue, editTarget, refTarget,
+      } = store.get();
       const correct = timesEqualAnalog(referenceTime, editTime);
-      const newSession = [...sessionHistory, correct];
-      const percentage = rollingPercentage(newSession);
-      const prev = scores[currentGameKey] || { completed: false, percentage: 0 };
-      const completed = isComplete(newSession) || prev.completed;
-      const newScores = { ...scores, [currentGameKey]: { completed, percentage } };
-      saveScores(newScores);
-      const justCompleted = isComplete(newSession) && !prev.completed;
-      const newRevisitQueue = correct ? revisitQueue : enqueueRevisit(revisitQueue, { referenceTime, editTarget, refTarget });
-      let adaptivePatch = {};
-      if (adaptive) {
-        const newAdaptiveLevel = correct
-          ? Math.min(adaptiveLevel + 2, ADAPTIVE_LEVELS.length - 1)
-          : Math.max(adaptiveLevel - 1, 0);
-        saveAdaptiveLevel(mode, newAdaptiveLevel);
-        const adl = ADAPTIVE_LEVELS[newAdaptiveLevel];
-        adaptivePatch = { adaptiveLevel: newAdaptiveLevel, minutesLevel: adl.minuteLevelId, hourMode: adl.hourModeId };
-      }
+      const { matrix: newMatrix, events } = recordAnswer(
+        matrix, roundMeta.attributionRep, roundMeta.conceptId, roundMeta.role, correct
+      );
+      saveMatrix(newMatrix);
+      const mastered = events.find(e => e.type === 'mastered') ?? null;
       store.set({
         checked: true,
         correct,
-        sessionHistory: newSession,
-        scores: newScores,
-        revisitQueue: newRevisitQueue,
+        matrix: newMatrix,
+        sessionHistory: [...sessionHistory, correct],
+        pendingMastery: mastered,
+        revisitQueue: correct
+          ? revisitQueue
+          : enqueueRevisit(revisitQueue, { referenceTime, editTarget, refTarget, roundMeta }),
         ...(!correct ? { roundsSinceEnqueue: 0 } : {}),
-        ...(justCompleted ? { screen: 'game-complete' } : {}),
-        ...adaptivePatch,
       });
     },
-    setEditTime: (time) => store.set({ editTime: time }),
+
+    nextRound: () => {
+      const { pendingMastery } = store.get();
+      if (pendingMastery) {
+        store.set({ screen: 'celebration', celebration: pendingMastery, pendingMastery: null });
+        return;
+      }
+      advance();
+    },
+
+    // From the celebration screen: resume the session (or end it).
+    continueSession: () => advance(),
   };
 }
