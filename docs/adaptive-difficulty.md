@@ -95,7 +95,10 @@ Every cell keeps a small rolling window of recent answers, split by role:
 ## Adaptivity rules (target: ~80% overall success)
 
 **Promotion** — a frontier concept is mastered when its last 5 frontier answers
-contain ≥ 4 correct (≥ 80%). This fires a `mastered` event (celebration).
+contain ≥ 4 correct (≥ 80%). Promotion is only evaluated on a correct answer, so
+a celebration never immediately follows a miss (likewise demotion and review
+slippage are only evaluated on wrong answers). This fires a `mastered` event
+(celebration).
 
 **Soft downward lever (frontier share)** — the frontier share is normally 50%.
 If the last 4 frontier answers contain ≥ 3 wrong, the share drops to 25% until
