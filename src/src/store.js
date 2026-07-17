@@ -163,12 +163,17 @@ export function createGameStore() {
 
     setEditTime: (time) => store.set({ editTime: time }),
 
-    check: () => {
+    // forcedCorrect: pass a boolean to override the time comparison — used by
+    // the zin editor, where a wrong word order has no time representation.
+    check: (forcedCorrect) => {
       const {
-        matrix, referenceTime, editTime, roundMeta,
+        matrix, referenceTime, editTime, roundMeta, checked,
         sessionHistory, revisitQueue, editTarget, refTarget,
       } = store.get();
-      const correct = timesEqualAnalog(referenceTime, editTime);
+      if (checked) return;
+      const correct = typeof forcedCorrect === 'boolean'
+        ? forcedCorrect
+        : timesEqualAnalog(referenceTime, editTime);
       const { matrix: newMatrix, events } = recordAnswer(
         matrix, roundMeta.attributionRep, roundMeta.conceptId, roundMeta.role, correct
       );
