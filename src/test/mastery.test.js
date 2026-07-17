@@ -106,6 +106,14 @@ describe('promotion', () => {
     expect(matrix.analog.heel_uur.review).toEqual([]);
   });
 
+  it('ignores stale frontier answers for an already-mastered concept', () => {
+    const m = masterUpTo(createMatrix(), 'analog', 'heel_uur');
+    const { matrix, events } = answerN(m, 'analog', 'heel_uur', 'frontier', [true, true, true, true, true]);
+    expect(events).toEqual([]);
+    expect(matrix.analog.heel_uur.window).toEqual([]);
+    expect(matrix.analog.heel_uur.mastered).toBe(true);
+  });
+
   it('does not mutate the input matrix', () => {
     const m = createMatrix();
     recordAnswer(m, 'analog', 'heel_uur', 'frontier', true);

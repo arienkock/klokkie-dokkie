@@ -5,6 +5,7 @@ import {
   LADDERS, REPRESENTATIONS,
   randomMinutesFor, randomHour12, randomHour24, randomHourAny,
 } from './concepts.js';
+import { pick } from './utils/random.js';
 
 const FRONTIER_WINDOW_MAX = 8;
 const REVIEW_WINDOW_MAX = 4;
@@ -19,7 +20,6 @@ const SLIP_MIN_WRONG = 3;
 const FRONTIER_SHARE = 0.5;
 const FRONTIER_SHARE_STRUGGLING = 0.25;
 
-const pick = (arr, rng) => arr[Math.floor(rng() * arr.length)];
 const countCorrect = arr => arr.filter(Boolean).length;
 const countWrong = arr => arr.length - countCorrect(arr);
 
@@ -72,6 +72,12 @@ export const frontierShare = (cell) =>
 // may contain: { type: 'mastered' | 'demoted' | 'slipped', rep, conceptId, ... }.
 // The input matrix is not mutated.
 export const recordAnswer = (matrix, rep, conceptId, role, correct) => {
+  // A stale frontier round (e.g. from the revisit queue) may arrive after
+  // the concept was already mastered; never re-promote or demote from it.
+  if (role === 'frontier' && matrix[rep][conceptId].mastered) {
+    return { matrix, events: [] };
+  }
+
   const events = [];
   const next = structuredClone(matrix);
   const cell = next[rep][conceptId];
