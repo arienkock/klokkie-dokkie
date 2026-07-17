@@ -357,6 +357,44 @@ input[type="checkbox"] {
   justify-content: flex-end;
 }
 
+/* Hold-to-check button */
+.btn--hold {
+  position: relative;
+  overflow: hidden;
+  user-select: none;
+  -webkit-user-select: none;
+  -webkit-touch-callout: none;
+}
+
+.btn-hold__fill {
+  position: absolute;
+  inset: 0;
+  background: rgba(255, 255, 255, 0.35);
+  transform: scaleX(0);
+  transform-origin: left center;
+  transition: transform 0.12s ease-out;
+  pointer-events: none;
+}
+
+.btn--holding .btn-hold__fill {
+  transform: scaleX(1);
+  transition: transform var(--hold-ms, 600ms) linear;
+}
+
+.btn-hold__label {
+  position: relative;
+}
+
+.hold-hint {
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--color-text-muted);
+}
+
+.hold-hint:not(:empty)::before {
+  content: '☝️ ';
+}
+
 /* Feedback */
 .feedback {
   font-size: 15px;

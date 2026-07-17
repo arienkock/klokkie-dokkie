@@ -5,6 +5,7 @@ import { DigitalClock } from './components/DigitalClock.js';
 import { AnalogClock } from './components/AnalogClock.js';
 import { SentenceClock } from './components/SentenceClock.js';
 import { createElement } from './utils/dom.js';
+import { holdButton, tapShield } from './utils/hold-button.js';
 
 const store = createGameStore();
 const app = document.getElementById('app');
@@ -165,12 +166,16 @@ function renderGame(state) {
   const footer = createElement('div', { class: 'game-footer' });
   if (!checked) {
     if (editTarget !== 'zin') {
-      footer.appendChild(btn('Controleer', 'btn btn--primary', () => store.check()));
+      // Grading is irreversible, so a stray tap must not grade: the button
+      // only fires after a short hold.
+      const check = holdButton('Controleer', () => store.check());
+      footer.appendChild(check.hint);
+      footer.appendChild(check.el);
     }
   } else {
     footer.appendChild(createElement('div', { class: 'feedback feedback--' + (correct ? 'correct' : 'wrong'), role: 'status' },
       correct ? 'Goed zo! ✓' : 'Helaas, dat klopt niet.'));
-    footer.appendChild(btn('Volgende', 'btn btn--primary', () => store.nextRound()));
+    footer.appendChild(btn('Volgende', 'btn btn--primary', tapShield(() => store.nextRound())));
   }
 
   const el = createElement('section', { class: 'screen screen--game' });
@@ -188,7 +193,7 @@ function renderCelebration(state) {
   el.appendChild(createElement('h2', { class: 'screen-heading' }, 'Nieuw niveau!'));
   el.appendChild(createElement('p', { class: 'complete-message' },
     `Je beheerst nu “${concept.label}” met ${REP_IN_WORDS[celebration.rep]}!`));
-  el.appendChild(btn('Verder oefenen', 'btn btn--primary btn--lg', () => store.continueSession()));
+  el.appendChild(btn('Verder oefenen', 'btn btn--primary btn--lg', tapShield(() => store.continueSession())));
   return el;
 }
 
@@ -212,8 +217,8 @@ function renderSessionEnd(state) {
   el.appendChild(progress);
 
   const actions = createElement('div', { class: 'btn-group' });
-  actions.appendChild(btn('Nog een keer!', 'btn btn--primary btn--lg', () => store.startSession()));
-  actions.appendChild(btn('Andere weergaven kiezen', 'btn btn--ghost', () => store.goToSetup()));
+  actions.appendChild(btn('Nog een keer!', 'btn btn--primary btn--lg', tapShield(() => store.startSession())));
+  actions.appendChild(btn('Andere weergaven kiezen', 'btn btn--ghost', tapShield(() => store.goToSetup())));
   el.appendChild(actions);
   return el;
 }
