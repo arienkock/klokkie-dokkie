@@ -6,24 +6,37 @@ Een interactieve webapp om klok lezen te oefenen. Bedoeld voor leerlingen die le
 
 ## Wat doet het?
 
-De app biedt oefensessies van 20 vragen in drie verschillende weergaven:
+De app biedt oefensessies van ongeveer 20 vragen in drie verschillende weergaven:
 
 - **Analoge klok** – versleep de wijzers naar de juiste stand
 - **Digitale klok** – stel uren en minuten in met pijltjesknopjes
 - **Zinnen** – rangschik Nederlandse woorden tot een correcte tijdzin (bijv. "kwart over twee")
 
-De moeilijkheidsgraad past zich automatisch aan op basis van je prestaties.
+Je kiest zelf welke weergaven je wilt oefenen (minstens twee). De
+moeilijkheidsgraad past zich daarna volledig automatisch aan: het spel mikt op
+zo'n 80% goede antwoorden en maakt kleine stapjes omhoog of omlaag, per
+weergave apart.
 
-## Moeilijkheidsgraden
+## Niveaus
 
-| Niveau | Nauwkeurigheid |
-|--------|---------------|
-| 1 | Alleen hele uren |
-| 2 | Veelvouden van 5 tot 30 minuten |
-| 3 | Alle veelvouden van 5 minuten |
-| 4 | Elke minuut |
+De niveaus vormen een ladder waarbij elke trede precies één nieuw begrip
+introduceert:
 
-Een oefenmodus wordt als afgerond gemarkeerd wanneer je 90% of meer scoort.
+| Niveau | Begrip |
+|--------|--------|
+| 1 | Hele uren ("twee uur") |
+| 2 | Halve uren ("half drie") |
+| 3 | Kwartieren ("kwart over / kwart voor") |
+| 4 | 24-uurs klok aflezen (alleen digitaal, bijv. 14:30) |
+| 5 | Vijf minuten vóór half ("vijf over", "tien voor half") |
+| 6 | Vijf minuten ná half ("vijf over half", "tien voor") |
+| 7 | Elke minuut |
+
+De voortgang per weergave wordt bewaard, zodat je later verdergaat waar je was
+gebleven. Als je een nieuw niveau beheerst, wordt dat gevierd. 🎉
+
+Meer detail over het adaptieve systeem staat in
+[docs/adaptive-difficulty.md](docs/adaptive-difficulty.md).
 
 ## Aan de slag
 

@@ -272,40 +272,9 @@ input[type="checkbox"] {
   padding: 14px 40px;
 }
 
-.btn--choice {
-  background: var(--color-surface);
-  color: var(--color-text);
-  border: 1px solid var(--color-border);
-  font-size: 15px;
-  padding: 12px 28px;
-  min-width: 120px;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 4px;
-}
-
-.btn--choice:hover {
-  background: var(--color-bg);
-  opacity: 1;
-  border-color: var(--color-accent);
-}
-
-.btn--completed {
-  border-color: #2e7d32 !important;
-  color: #2e7d32 !important;
-}
-
-.btn--progress {
-  border-color: #e65100 !important;
-  color: #e65100 !important;
-}
-
-.score-badge {
-  font-size: 11px;
-  font-weight: 700;
-  letter-spacing: 0.04em;
-  opacity: 0.85;
+.btn:disabled {
+  opacity: 0.35;
+  cursor: not-allowed;
 }
 
 .choice-label {
@@ -445,58 +414,6 @@ input[type="checkbox"] {
   padding-bottom: 8px;
 }
 
-.difficulty-grid {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 12px;
-  width: 100%;
-  max-width: 480px;
-}
-
-.btn--difficulty {
-  display: flex;
-  flex-direction: column;
-  align-items: flex-start;
-  gap: 4px;
-  background: var(--color-surface);
-  border: 1px solid var(--color-border);
-  border-radius: var(--radius);
-  padding: 16px 20px;
-  cursor: pointer;
-  text-align: left;
-  font-family: var(--font);
-  transition: border-color 0.15s, background 0.15s;
-  color: var(--color-text);
-}
-
-.btn--difficulty:hover {
-  border-color: var(--color-accent);
-  background: var(--color-bg);
-}
-
-.difficulty-label {
-  font-size: 15px;
-  font-weight: 600;
-}
-
-.difficulty-sub {
-  font-size: 12px;
-  color: var(--color-text-muted);
-  font-weight: 400;
-}
-
-.btn--adaptive {
-  grid-column: span 2;
-  border-style: dashed;
-  border-color: var(--color-accent);
-}
-
-.btn--adaptive .choice-label::after {
-  content: ' ✦';
-  font-size: 11px;
-  opacity: 0.5;
-}
-
 .btn--ghost {
   background: none;
   border: none;
@@ -512,56 +429,119 @@ input[type="checkbox"] {
   color: var(--color-text);
 }
 
-.select-step {
-  font-size: 11px;
-  font-weight: 600;
-  letter-spacing: 0.1em;
-  text-transform: uppercase;
+/* Setup: representation picker */
+.setup-sub {
+  font-size: 14px;
   color: var(--color-text-muted);
+  text-align: center;
+  max-width: 420px;
 }
 
-.hour-mode-group {
-  display: flex;
+.setup-hint {
+  font-size: 13px;
+  color: #c62828;
+}
+
+.rep-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
   gap: 12px;
-  justify-content: center;
-  flex-wrap: wrap;
   width: 100%;
-  max-width: 480px;
+  max-width: 600px;
 }
 
-.btn--hour-mode {
+.rep-card {
+  position: relative;
   display: flex;
   flex-direction: column;
   align-items: flex-start;
-  gap: 4px;
+  gap: 6px;
   background: var(--color-surface);
-  border: 1px solid var(--color-border);
+  border: 2px solid var(--color-border);
   border-radius: var(--radius);
-  padding: 16px 20px;
+  padding: 16px;
   cursor: pointer;
-  text-align: left;
   font-family: var(--font);
-  transition: border-color 0.15s, background 0.15s;
-  flex: 1;
-  min-width: 140px;
-  max-width: 220px;
+  font-size: 15px;
   color: var(--color-text);
+  text-align: left;
+  transition: border-color 0.15s, background 0.15s;
 }
 
-.btn--hour-mode:hover {
+.rep-card:hover {
+  border-color: var(--color-accent);
+}
+
+.rep-card--selected {
   border-color: var(--color-accent);
   background: var(--color-bg);
 }
 
-.hour-mode-label {
-  font-size: 15px;
-  font-weight: 600;
+.rep-card__check {
+  position: absolute;
+  top: 10px;
+  right: 12px;
+  min-width: 16px;
+  min-height: 16px;
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--color-accent);
 }
 
-.hour-mode-sub {
+.rep-card__sub {
   font-size: 12px;
   color: var(--color-text-muted);
   font-weight: 400;
+}
+
+/* Ladder progress */
+.ladder-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-top: 6px;
+}
+
+.ladder-rep {
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--color-text-muted);
+  min-width: 68px;
+  text-align: left;
+}
+
+.ladder-dots {
+  display: flex;
+  gap: 5px;
+}
+
+.ladder-dot {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  border: 2px solid var(--color-border);
+}
+
+.ladder-dot--done {
+  background: #2e7d32;
+  border-color: #2e7d32;
+}
+
+.ladder-dot--current {
+  border-color: var(--color-accent);
+}
+
+.ladder-summary {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  align-items: center;
+}
+
+.ladder-summary .ladder-row {
+  margin-top: 0;
 }
 
 /* Game complete screen */
@@ -715,13 +695,7 @@ input[type="checkbox"] {
     flex-direction: column;
     align-items: stretch;
   }
-  .btn--choice {
-    min-width: unset;
-  }
-  .difficulty-grid {
+  .rep-grid {
     grid-template-columns: 1fr;
-  }
-  .btn--adaptive {
-    grid-column: span 1;
   }
 }
