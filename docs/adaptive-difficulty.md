@@ -94,16 +94,40 @@ Every cell keeps a small rolling window of recent answers, split by role:
 
 ## Adaptivity rules (target: ~80% overall success)
 
-**Promotion** — a frontier concept is mastered when its last 5 frontier answers
-contain ≥ 4 correct (≥ 80%). Promotion is only evaluated on a correct answer, so
-a celebration never immediately follows a miss (likewise demotion and review
-slippage are only evaluated on wrong answers). This fires a `mastered` event
-(celebration).
+**Promotion** — a frontier concept is mastered when its last 3 frontier answers
+are all correct (fast track), or its last 5 frontier answers contain ≥ 4 correct
+(≥ 80%). The fast track lets a child who is cruising climb several rungs within
+a single game instead of grinding 5 answers per representation per rung.
+Promotion is only evaluated on a correct answer, so a celebration never
+immediately follows a miss (likewise demotion and review slippage are only
+evaluated on wrong answers). This fires a `mastered` event (celebration).
 
-**Soft downward lever (frontier share)** — the frontier share is normally 50%.
-If the last 4 frontier answers contain ≥ 3 wrong, the share drops to 25% until
-the recent window recovers (≥ 2 correct in the last 4). The child sees the hard
-concept less often, and overall accuracy recovers without a formal demotion.
+**Session controller (frontier share)** — the frontier share is steered per
+round by the current game's results, so difficulty adapts *within* a session
+rather than only across sessions (per-cell windows fill far too slowly for
+that: with 3 representations a 20-round game gives each cell only a handful of
+answers). The share follows the wrong-answer count over the last 6 session
+answers, all representations combined; with fewer than 4 answers so far it
+stays at the 50% default:
+
+| wrong in last 6 | frontier share |
+|-----------------|----------------|
+| 0               | 85%            |
+| 1               | 50%            |
+| 2               | 35%            |
+| ≥ 3             | 20%            |
+
+A flawless run quickly becomes nearly all frontier questions — combined with
+fast-track promotion, a strong player meets new concepts within the same game —
+while a rough patch backs off to mostly review until accuracy recovers toward
+the 80% target. The session history resets each game; long-term state lives
+only in the mastery matrix.
+
+**Per-concept floor** — independently of the session controller, if a frontier
+cell's last 4 answers contain ≥ 3 wrong, its share is capped at 25% until the
+recent window recovers (≥ 2 correct in the last 4). The child sees that
+specific hard concept less often even when the session as a whole is going
+fine, and accuracy recovers without a formal demotion.
 
 **Demotion (hard lever)** — if a frontier cell's window holds ≥ 8 answers with
 ≤ 3 correct, demote: the *previous* rung is un-mastered (becoming the new
@@ -142,7 +166,8 @@ first load; progress starts fresh under the new model.
   snapping config, ladder order, per-representation ladders. Replaces
   `difficulties.js`.
 - `src/mastery.js` — pure functions over the mastery matrix: `createMatrix()`,
-  `frontierFor(matrix, rep)`, `frontierShare(cell)`, `pickRound(matrix, reps, rng)`,
+  `frontierFor(matrix, rep)`, `sessionShare(sessionResults)`,
+  `frontierShare(cell, sessionResults)`, `pickRound(matrix, reps, rng, sessionResults)`,
   `recordAnswer(matrix, rep, concept, role, correct)` → `{ matrix, events }`.
   No DOM, no storage; fully unit-tested.
 - `src/store.js` — game flow: representation selection, round lifecycle, session

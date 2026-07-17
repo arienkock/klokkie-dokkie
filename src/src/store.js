@@ -79,8 +79,8 @@ export function createGameStore() {
     correct: false,
   });
 
-  const freshRound = (matrix, selectedReps) => {
-    const r = pickRound(matrix, selectedReps);
+  const freshRound = (matrix, selectedReps, sessionHistory) => {
+    const r = pickRound(matrix, selectedReps, Math.random, sessionHistory);
     return {
       editTarget: r.editTarget,
       refTarget: r.refTarget,
@@ -113,7 +113,7 @@ export function createGameStore() {
       return;
     }
     const useRevisit = revisitQueue.length > 0 && roundsSinceEnqueue >= REVISIT_AFTER;
-    const round = useRevisit ? revisitRound(revisitQueue[0]) : freshRound(matrix, selectedReps);
+    const round = useRevisit ? revisitRound(revisitQueue[0]) : freshRound(matrix, selectedReps, sessionHistory);
     store.set({
       screen: 'game',
       roundIndex: roundIndex + 1,
@@ -157,7 +157,7 @@ export function createGameStore() {
         roundsSinceEnqueue: 0,
         pendingMastery: null,
         celebration: null,
-        ...freshRound(matrix, selectedReps),
+        ...freshRound(matrix, selectedReps, []),
       });
     },
 
