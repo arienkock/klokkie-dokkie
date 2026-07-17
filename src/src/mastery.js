@@ -9,6 +9,7 @@ import { pick } from './utils/random.js';
 
 const FRONTIER_WINDOW_MAX = 8;
 const REVIEW_WINDOW_MAX = 4;
+const PROMOTE_STREAK = 3;
 const PROMOTE_LOOKBACK = 5;
 const PROMOTE_MIN_CORRECT = 4;
 const DEMOTE_MIN_ANSWERS = 8;
@@ -19,6 +20,11 @@ const SLIP_LOOKBACK = 4;
 const SLIP_MIN_WRONG = 3;
 const FRONTIER_SHARE = 0.5;
 const FRONTIER_SHARE_STRUGGLING = 0.25;
+const SESSION_LOOKBACK = 6;
+const SESSION_MIN_ANSWERS = 4;
+// Frontier share by wrong-answer count in the last SESSION_LOOKBACK session
+// answers (counts past the last index use the last entry).
+const SHARE_BY_SESSION_WRONG = [0.85, 0.5, 0.35, 0.2];
 
 const countCorrect = arr => arr.filter(Boolean).length;
 const countWrong = arr => arr.length - countCorrect(arr);
@@ -65,8 +71,22 @@ export const isStruggling = (cell) => {
   return recent.length >= STRUGGLE_LOOKBACK && countWrong(recent) >= STRUGGLE_MIN_WRONG;
 };
 
-export const frontierShare = (cell) =>
-  isStruggling(cell) ? FRONTIER_SHARE_STRUGGLING : FRONTIER_SHARE;
+// Within-session controller: steer the frontier/review mix toward the ~80%
+// success target from the current game's recent answers. Perfect recent play
+// pushes the frontier hard; a rough patch backs off to mostly review.
+export const sessionShare = (sessionResults = []) => {
+  const recent = sessionResults.slice(-SESSION_LOOKBACK);
+  if (recent.length < SESSION_MIN_ANSWERS) return FRONTIER_SHARE;
+  return SHARE_BY_SESSION_WRONG[Math.min(countWrong(recent), SHARE_BY_SESSION_WRONG.length - 1)];
+};
+
+// The session controller sets the base share; a cell the child is actively
+// struggling with is additionally floored down so that specific concept
+// backs off even when the session as a whole is going fine.
+export const frontierShare = (cell, sessionResults = []) => {
+  const share = sessionShare(sessionResults);
+  return isStruggling(cell) ? Math.min(share, FRONTIER_SHARE_STRUGGLING) : share;
+};
 
 // Record one answer into the matrix. Returns { matrix, events } where events
 // may contain: { type: 'mastered' | 'demoted' | 'slipped', rep, conceptId, ... }.
@@ -84,8 +104,13 @@ export const recordAnswer = (matrix, rep, conceptId, role, correct) => {
 
   if (role === 'frontier') {
     cell.window = [...cell.window, correct].slice(-FRONTIER_WINDOW_MAX);
+    const streak = cell.window.slice(-PROMOTE_STREAK);
     const recent = cell.window.slice(-PROMOTE_LOOKBACK);
-    if (correct && recent.length >= PROMOTE_LOOKBACK && countCorrect(recent) >= PROMOTE_MIN_CORRECT) {
+    const promoted = correct && (
+      (streak.length >= PROMOTE_STREAK && streak.every(Boolean)) ||
+      (recent.length >= PROMOTE_LOOKBACK && countCorrect(recent) >= PROMOTE_MIN_CORRECT)
+    );
+    if (promoted) {
       next[rep][conceptId] = { ...freshCell(), mastered: true };
       events.push({ type: 'mastered', rep, conceptId });
     } else if (!correct && cell.window.length >= DEMOTE_MIN_ANSWERS && countCorrect(cell.window) <= DEMOTE_MAX_CORRECT) {
@@ -129,15 +154,16 @@ const reviewRound = (matrix, editTarget, refTarget, rng) => {
 };
 
 // Pick the next round: representations, concept, role and a concrete time.
-// selectedReps must contain at least two representations.
-export const pickRound = (matrix, selectedReps, rng = Math.random) => {
+// selectedReps must contain at least two representations. sessionResults is
+// the current game's answer history, steering the frontier/review mix.
+export const pickRound = (matrix, selectedReps, rng = Math.random, sessionResults = []) => {
   const editTarget = pick(selectedReps, rng);
   const refTarget = pick(selectedReps.filter(r => r !== editTarget), rng);
 
   // uur_24 exception: a reading skill, exercised with digital as the
   // reference and attributed to digital regardless of the edit target.
   if (editTarget === 'digital' && frontierFor(matrix, 'digital') === 'uur_24') {
-    if (rng() < frontierShare(matrix.digital.uur_24)) {
+    if (rng() < frontierShare(matrix.digital.uur_24, sessionResults)) {
       const newEdit = pick(selectedReps.filter(r => r !== 'digital'), rng);
       const minuteConceptId = pick(masteredMinuteConcepts(matrix, 'digital'), rng);
       return {
@@ -156,7 +182,7 @@ export const pickRound = (matrix, selectedReps, rng = Math.random) => {
   const frontier = frontierFor(matrix, editTarget);
   const reviewPool = masteredMinuteConcepts(matrix, editTarget);
   const wantFrontier = frontier !== null &&
-    (reviewPool.length === 0 || rng() < frontierShare(matrix[editTarget][frontier]));
+    (reviewPool.length === 0 || rng() < frontierShare(matrix[editTarget][frontier], sessionResults));
 
   if (!wantFrontier) return reviewRound(matrix, editTarget, refTarget, rng);
 
