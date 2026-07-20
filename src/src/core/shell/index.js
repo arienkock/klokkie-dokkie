@@ -3,6 +3,7 @@
 // the prompt/answer cells are filled by `domain.renderReference` /
 // `domain.renderAnswer`. Imports nothing from `domains/` or concepts.
 
+import './styles.css';
 import { createGame, SESSION_NOMINAL } from '../game/index.js';
 import { createElement } from '../util/dom.js';
 import { holdButton, tapShield } from '../util/hold-button.js';
@@ -99,8 +100,8 @@ export function createPracticeApp({ domain, engine, mount, storage }) {
     prevViews.push(refView, ansView);
 
     const makeCell = (view, isEdit) => {
-      const cell = createElement('div', { class: 'clock-cell' + (isEdit ? ' clock-cell--edit' : '') });
-      cell.appendChild(createElement('div', { class: 'clock-label' + (isEdit ? ' clock-label--edit' : '') }, view.label));
+      const cell = createElement('div', { class: 'problem-cell' + (isEdit ? ' problem-cell--edit' : '') });
+      cell.appendChild(createElement('div', { class: 'problem-label' + (isEdit ? ' problem-label--edit' : '') }, view.label));
       cell.appendChild(view.el);
       return cell;
     };
@@ -115,7 +116,7 @@ export function createPracticeApp({ domain, engine, mount, storage }) {
     header.appendChild(createElement('span', { class: 'game-score' }, scoreText));
     header.appendChild(btn(strings.stopButton, 'btn btn--ghost', () => store.goToSetup()));
 
-    const grid = createElement('div', { class: 'clock-grid' });
+    const grid = createElement('div', { class: 'problem-grid' });
     grid.appendChild(makeCell(ansView, true));
     grid.appendChild(makeCell(refView, false));
 

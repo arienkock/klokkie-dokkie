@@ -1,0 +1,293 @@
+:root {
+  --color-hand-hour: #1a1a1a;
+  --color-hand-minute: #444;
+  --color-face: #fff;
+  --color-rim: #1a1a1a;
+  --color-marker: #1a1a1a;
+}
+
+/* Analog Clock SVG */
+.analog-clock {
+  width: 100%;
+  max-width: 200px;
+  display: block;
+  user-select: none;
+  touch-action: none;
+}
+
+.clock-face {
+  fill: var(--color-face);
+}
+
+.clock-rim {
+  fill: none;
+  stroke: var(--color-rim);
+  stroke-width: 2.5;
+}
+
+.hour-tick {
+  stroke: var(--color-marker);
+  stroke-width: 2;
+  stroke-linecap: round;
+}
+
+.hour-num {
+  font-family: var(--font);
+  font-size: 12px;
+  font-weight: 500;
+  fill: var(--color-text);
+}
+
+.hour-dot {
+  fill: var(--color-marker);
+}
+
+.hour-hand {
+  stroke: var(--color-hand-hour);
+  stroke-width: 4;
+  stroke-linecap: round;
+}
+
+.minute-hand {
+  stroke: var(--color-hand-minute);
+  stroke-width: 2.5;
+  stroke-linecap: round;
+}
+
+.hand-hit {
+  stroke: transparent;
+  stroke-width: 16;
+  cursor: grab;
+}
+
+@media (pointer: coarse) {
+  .hand-hit {
+    stroke-width: 28;
+  }
+}
+
+.hand-hit:active {
+  cursor: grabbing;
+}
+
+.center-dot {
+  fill: var(--color-rim);
+}
+
+/* Digital Clock */
+.digital-clock {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+}
+
+.digital-time {
+  font-size: clamp(36px, 8vw, 64px);
+  font-weight: 300;
+  letter-spacing: 0.04em;
+  font-variant-numeric: tabular-nums;
+  color: var(--color-text);
+  line-height: 1;
+}
+
+/* Editable digital clock */
+.digital-clock--editable {
+  padding: 8px 0;
+}
+
+.digit-row {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.digit-col {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+}
+
+.digit-btn {
+  font-family: var(--font);
+  font-size: 13px;
+  background: none;
+  border: 1px solid var(--color-border);
+  border-radius: 4px;
+  width: 44px;
+  height: 40px;
+  cursor: pointer;
+  touch-action: manipulation;
+  color: var(--color-text-muted);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: background 0.1s, border-color 0.1s;
+}
+
+.digit-btn:hover {
+  background: var(--color-bg);
+  border-color: var(--color-accent);
+  color: var(--color-text);
+}
+
+.digit-val {
+  font-size: clamp(28px, 6vw, 48px);
+  font-weight: 300;
+  letter-spacing: 0.04em;
+  font-variant-numeric: tabular-nums;
+  min-width: 32px;
+  text-align: center;
+  line-height: 1;
+}
+
+.digit-sep {
+  font-size: clamp(28px, 6vw, 48px);
+  font-weight: 300;
+  line-height: 1;
+  color: var(--color-text-muted);
+  margin: 0 2px;
+  padding-bottom: 8px;
+}
+
+.btn--ghost {
+  background: none;
+  border: none;
+  color: var(--color-text-muted);
+  font-size: 13px;
+  font-family: var(--font);
+  cursor: pointer;
+  padding: 12px 10px;
+  min-height: 44px;
+  transition: color 0.15s;
+}
+
+.btn--ghost:hover {
+  color: var(--color-text);
+}
+
+/* Sentence Clock */
+.sentence-clock {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+}
+
+.sentence-text {
+  font-size: clamp(20px, 3.5vw, 28px);
+  font-weight: 300;
+  text-align: center;
+  color: var(--color-text);
+  line-height: 1.5;
+}
+
+.sentence-clock--editable {
+  flex-direction: column;
+  gap: 16px;
+  align-items: stretch;
+}
+
+.sentence-slots {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  justify-content: center;
+  padding: 12px 0;
+  min-height: 56px;
+}
+
+.word-slot {
+  min-width: 72px;
+  height: 44px;
+  border: 2px dashed var(--color-border);
+  border-radius: 6px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 15px;
+  font-weight: 500;
+  color: var(--color-text);
+  padding: 0 12px;
+  transition: border-color 0.12s, background 0.12s;
+}
+
+.word-slot.drag-over {
+  border-color: var(--color-accent);
+  background: var(--color-bg);
+}
+
+.word-slot--filled {
+  border-style: solid;
+  border-color: var(--color-border);
+  cursor: grab;
+  touch-action: none;
+}
+
+.word-slot--filled:active,
+.word-slot--filled.dragging {
+  opacity: 0.4;
+  cursor: grabbing;
+}
+
+.word-slot--wrong {
+  border-color: #c62828;
+  background: #fce4ec;
+  animation: slot-shake 0.4s ease;
+}
+
+@keyframes slot-shake {
+  0%, 100% { transform: translateX(0); }
+  25%       { transform: translateX(-5px); }
+  75%       { transform: translateX(5px); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .word-slot--wrong {
+    animation: none;
+  }
+}
+
+.word-tray {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  justify-content: center;
+  padding: 12px;
+  background: var(--color-bg);
+  border-radius: var(--radius);
+  min-height: 56px;
+}
+
+.word-block {
+  height: 44px;
+  padding: 0 14px;
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: 6px;
+  display: flex;
+  align-items: center;
+  font-size: 15px;
+  font-weight: 500;
+  color: var(--color-text);
+  cursor: grab;
+  user-select: none;
+  touch-action: none;
+  transition: border-color 0.12s;
+}
+
+.word-block:hover {
+  border-color: var(--color-accent);
+}
+
+.word-block.dragging {
+  opacity: 0.4;
+  cursor: grabbing;
+}
+
+.word-ghost {
+  pointer-events: none;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+  transform: rotate(2deg);
+}

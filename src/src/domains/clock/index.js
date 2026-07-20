@@ -2,6 +2,7 @@
 // ladders, round generation, grading, Dutch copy, and widget wiring for the
 // clock problem family.
 
+import './styles.css';
 import { LADDERS, REPRESENTATIONS, getConcept } from './concepts.js';
 import { pickRound as clockPickRound, grade as clockGrade } from './round.js';
 import { DigitalClock } from './widgets/DigitalClock.js';
