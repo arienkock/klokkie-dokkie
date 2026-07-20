@@ -232,6 +232,88 @@ Digital, editable Digital, Sentence). Both imported by the app entry.
 `submitMode: 'manual'`) that reuses the core unchanged. Not a shipped feature —
 the acceptance test that the core is genuinely clock-agnostic. Add a smoke test.
 
+## Appendix A — Phase 4 API (exact contract)
+
+### `core/game` exports
+
+`createStore(initial)` — the generic pub/sub store, moved verbatim from
+`store.js` (`get`/`set`/`subscribe`). Unchanged.
+
+`createGame({ engine, domain, storage })` → store object. `engine` is the core
+adaptive engine (matrix ops); `domain` is the clock domain object below;
+`storage` is a localStorage-like object (`getItem`/`setItem`/`removeItem`).
+
+State shape (domain-agnostic):
+```
+{
+  screen: 'setup' | 'game' | 'celebration' | 'session-end',
+  selectedTracks: string[],
+  matrix,
+  roundIndex, sessionHistory, revisitQueue, roundsSinceEnqueue,
+  pendingMastery, celebration,
+  round: null | { attributionTrack, rungId, role, ...domainPayload },
+  answerState,
+  checked, correct,
+}
+```
+Methods: `get`, `subscribe`, `toggleTrack(track)`, `goToSetup`, `startSession`,
+`setAnswer(value)` (sets `answerState`), `check(explicitCorrect?)`, `nextRound`,
+`continueSession`. Constants `SESSION_NOMINAL`/`SESSION_CAP` exported from
+`core/game`.
+
+Behaviour (identical to today, generalized):
+- `startSession` requires `selectedTracks.length >= domain.setup.minTracks`.
+- fresh round: `round = domain.pickRound(engine, matrix, selectedTracks, Math.random, sessionHistory)`; `answerState = domain.initAnswer(round)`.
+- `check`: `correct = typeof explicitCorrect === 'boolean' ? explicitCorrect : domain.grade(round, answerState)`; then `engine.recordAnswer(matrix, round.attributionTrack, round.rungId, round.role, correct)`. On a wrong answer, the whole `round` object is enqueued for revisit; a revisit re-inits `answerState = domain.initAnswer(round)`.
+- persistence: matrix under `domain.storageKeys.matrix`, tracks under `domain.storageKeys.tracks`; purge `domain.legacyStorageKeys` on load; loaded tracks validated against `domain.tracks` ids and `minTracks`.
+
+### `domains/clock/index.js` exports
+
+`round.js` gains `export const engine = …` (its existing instance, now exported)
+so there is exactly one clock engine. `index.js`:
+```
+export { engine } from './round.js';
+export const clockDomain = {
+  id: 'clock',
+  storageKeys: { matrix: 'klokkie-mastery-v1', tracks: 'klokkie-reps-v1' },
+  legacyStorageKeys: ['klok-oefenen-scores', 'klok-oefenen-adaptive'],
+  tracks: REPRESENTATIONS.map(id => ({ id, ladder: LADDERS[id] })),  // labels added in Phase 5
+  setup: { minTracks: 2 },
+  rung: (id) => ({ id, label: getConcept(id).label }),
+  pickRound(engine, matrix, selectedTracks, rng, sessionResults) {
+    const r = clockPickRound(matrix, selectedTracks, rng, sessionResults);
+    return { attributionTrack: r.attributionRep, rungId: r.conceptId, role: r.role,
+             editTarget: r.editTarget, refTarget: r.refTarget,
+             minuteConceptId: r.minuteConceptId, referenceTime: r.time };
+  },
+  initAnswer: (round) => ({ ...getConcept(round.minuteConceptId).initialEditTime }),
+  grade: (round, answerState) => clockGrade(round.referenceTime, answerState),
+  // strings + renderReference/renderAnswer/submitMode added in Phase 5
+};
+```
+
+### `store.js` (thin clock wrapper, transitional)
+```
+export { createStore, SESSION_NOMINAL, SESSION_CAP } from './core/game/index.js';
+import { createGame } from './core/game/index.js';
+import { clockDomain, engine } from './domains/clock/index.js';
+export const createGameStore = () => createGame({ engine, domain: clockDomain, storage: localStorage });
+```
+
+### `main.js` state-read updates (mechanical; widgets/strings stay until Phase 5)
+`selectedReps`→`selectedTracks`; `toggleRep`→`toggleTrack`;
+`roundMeta.minuteConceptId`→`round.minuteConceptId`;
+`editTarget`/`refTarget`→`round.editTarget`/`round.refTarget`;
+`referenceTime`→`round.referenceTime`; `editTime`→`answerState`;
+`setEditTime`→`setAnswer`; render-key uses `selectedTracks`.
+
+### `store.test.js` updates (same transforms)
+`selectedReps`→`selectedTracks`, `toggleRep`→`toggleTrack`,
+`roundMeta.conceptId`→`round.rungId`, `roundMeta.attributionRep`→`round.attributionTrack`,
+`roundMeta.role`→`round.role`, `referenceTime`→`round.referenceTime`,
+`editTime`→`answerState`, `editTarget`/`refTarget`→`round.editTarget`/`round.refTarget`,
+`setEditTime`→`setAnswer`. `createStore` still imported from `store.js` (re-exported).
+
 ## Invariants to protect
 
 - `npm test` green after every phase (146 tests at baseline).
