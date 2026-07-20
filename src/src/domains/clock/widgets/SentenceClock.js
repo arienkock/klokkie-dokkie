@@ -1,4 +1,4 @@
-import { timeToZin, zinToWords, generateTray } from '../utils/zinnen.js';
+import { timeToZin, zinToWords, generateTray } from '../util/zinnen.js';
 
 const DOUBLE_TAP_MS = 300;
 const DRAG_THRESHOLD = 5;

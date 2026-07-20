@@ -8,7 +8,7 @@ import {
   pointAngle,
   handEndpoint,
   snapTo,
-} from '../src/utils/time.js';
+} from '../src/domains/clock/util/time.js';
 
 describe('pad2', () => {
   it('pads single digit', () => {

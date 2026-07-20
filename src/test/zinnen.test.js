@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { timeToZin, zinToWords, generateTray } from '../src/utils/zinnen.js';
+import { timeToZin, zinToWords, generateTray } from '../src/domains/clock/util/zinnen.js';
 
 describe('timeToZin', () => {
   it('volle uren: "X uur"', () => {

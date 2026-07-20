@@ -1,6 +1,6 @@
 // Concept ladder for adaptive difficulty. See docs/adaptive-difficulty.md.
 
-import { pick } from './utils/random.js';
+import { pick } from './core/util/random.js';
 
 const VRIJ_MINUTES = Array.from({ length: 60 }, (_, m) => m).filter(m => m % 5 !== 0);
 

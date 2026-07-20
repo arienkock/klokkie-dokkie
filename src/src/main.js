@@ -1,11 +1,11 @@
 import { createGameStore, SESSION_NOMINAL } from './store.js';
 import { getConcept, LADDERS, REPRESENTATIONS } from './concepts.js';
 import { frontierFor } from './mastery.js';
-import { DigitalClock } from './components/DigitalClock.js';
-import { AnalogClock } from './components/AnalogClock.js';
-import { SentenceClock } from './components/SentenceClock.js';
-import { createElement } from './utils/dom.js';
-import { holdButton, tapShield } from './utils/hold-button.js';
+import { DigitalClock } from './domains/clock/widgets/DigitalClock.js';
+import { AnalogClock } from './domains/clock/widgets/AnalogClock.js';
+import { SentenceClock } from './domains/clock/widgets/SentenceClock.js';
+import { createElement } from './core/util/dom.js';
+import { holdButton, tapShield } from './core/util/hold-button.js';
 
 const store = createGameStore();
 const app = document.getElementById('app');

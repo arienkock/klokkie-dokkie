@@ -6,9 +6,7 @@
     "build": "vite build",
     "test": "node node_modules/vitest/vitest.mjs run"
   },
-  "dependencies": {
-    "@shoelace-style/shoelace": "^2.19.1"
-  },
+  "dependencies": {},
   "devDependencies": {
     "vite": "^6.2.2",
     "vitest": "^3.0.9",

@@ -1,4 +1,4 @@
-import { pad2 } from '../utils/time.js';
+import { pad2 } from '../util/time.js';
 
 const clamp = (v, min, max) => Math.max(min, Math.min(max, v));
 

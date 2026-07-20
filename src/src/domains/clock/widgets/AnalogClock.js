@@ -2,7 +2,7 @@ import {
   hoursToAngle, minutesToAngle,
   angleToMinutes, angleToHours12,
   pointAngle, svgPoint, handEndpoint, snapTo,
-} from '../utils/time.js';
+} from '../util/time.js';
 
 const NS = 'http://www.w3.org/2000/svg';
 const CX = 100, CY = 100, R = 90;

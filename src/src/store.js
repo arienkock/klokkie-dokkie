@@ -1,6 +1,6 @@
 import { getConcept, REPRESENTATIONS } from './concepts.js';
 import { createMatrix, normalizeMatrix, pickRound, recordAnswer } from './mastery.js';
-import { timesEqualAnalog } from './utils/time.js';
+import { timesEqualAnalog } from './domains/clock/util/time.js';
 
 export function createStore(initial) {
   let state = { ...initial };

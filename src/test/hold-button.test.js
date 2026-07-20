@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
-import { holdButton, tapShield, HOLD_MS, TAP_SHIELD_MS } from '../src/utils/hold-button.js';
+import { holdButton, tapShield, HOLD_MS, TAP_SHIELD_MS } from '../src/core/util/hold-button.js';
 
 describe('holdButton', () => {
   let onConfirm;

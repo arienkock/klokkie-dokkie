@@ -5,7 +5,7 @@ import {
   LADDERS, REPRESENTATIONS,
   randomMinutesFor, randomHour12, randomHour24, randomHourAny,
 } from './concepts.js';
-import { pick } from './utils/random.js';
+import { pick } from './core/util/random.js';
 
 const FRONTIER_WINDOW_MAX = 8;
 const REVIEW_WINDOW_MAX = 4;

@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeEach } from 'vitest';
-import { qs, qsa, createElement, emit } from '../src/utils/dom.js';
+import { qs, qsa, createElement, emit } from '../src/core/util/dom.js';
 
 describe('qs', () => {
   beforeEach(() => {
