@@ -314,6 +314,39 @@ export const createGameStore = () => createGame({ engine, domain: clockDomain, s
 `editTime`→`answerState`, `editTarget`/`refTarget`→`round.editTarget`/`round.refTarget`,
 `setEditTime`→`setAnswer`. `createStore` still imported from `store.js` (re-exported).
 
+## Appendix B — Phase 5 API (shell contract)
+
+`core/shell/index.js` exports `createPracticeApp({ domain, engine, mount, storage })`:
+builds `store = createGame({ engine, domain, storage })`, renders the screens,
+subscribes with the existing render-key + focus logic, and does the initial
+render. It imports NOTHING from `domains/`/`concepts.js`. All screen scaffolding
+(nav, ladder dots, setup picker, two-pane game, celebration, session-end,
+hold-to-check, tap shields, render-key, focus) moves here, generalized:
+
+- **ladder dots**: `ladder = track.ladder`; `frontier = engine.frontierFor(matrix, track.id)`;
+  dot title = `domain.rung(id).label`; row label = `track.label`; aria via `strings.ladderAria`.
+- **setup picker**: iterate `domain.tracks`; `canStart = selectedTracks.length >= domain.setup.minTracks`.
+- **game**: `refView = domain.renderReference(round)`; `ansView = domain.renderAnswer(round, answerState, { editable: !checked, onValue: v => store.setAnswer(v), onSubmit: c => store.check(c) })`.
+  Answer cell first (`clock-cell--edit`/`clock-label--edit`), reference cell second; labels from the views. On re-render, call `view.destroy?.()` on the previous views.
+  Footer: if `!checked` and `domain.submitMode(round) === 'manual'`, show `holdButton(strings.checkButton, () => store.check())`; if `'auto'`, no button. If `checked`: feedback + next.
+- **celebration/session-end**: copy from `strings`; celebration track label via `domain.tracks` lookup by `celebration.rep`, rung via `domain.rung(celebration.conceptId)`.
+
+### Domain additions (Phase 5)
+Extend `clockDomain`:
+- `tracks[i]` gains `label`, `sublabel`, `inWords` (from `main.js`'s `REP_LABELS`/`REP_SUBLABELS`/`REP_IN_WORDS`).
+- `strings`: `{ navTitle, setupHeading, setupSub, startButton, setupHint, stopButton, checkButton, feedbackCorrect, feedbackWrong, nextButton, celebrationIcon:'🎉', celebrationHeading, celebrationMessage(rungLabel, trackInWords), celebrationButton, sessionEndIcon:'⭐', sessionEndHeading, sessionEndMessage(correct, total, pct), progressLabel, restartButton, changeTracksButton, scoreOf(nr, nominal)/scoreOverflow(nr)/scoreSuffix(correct,total), ladderAria(trackLabel, done, total) }`. **Every string value must be byte-identical to the current `main.js` copy.**
+- `renderReference(round) → { el, label, destroy? }`, `renderAnswer(round, answerState, { editable, onValue, onSubmit }) → { el, label, destroy? }`, `submitMode(round) → 'manual'|'auto'` — implemented with the clock widgets, moving `makeComponent`, `COMPONENT_LABELS`, the `editDisplayTime` (`zin` uses `referenceTime`, else `answerState`), and the `zin` 700 ms auto-submit exactly as in current `main.js`.
+
+### Entry point
+`main.js` becomes: import `clockDomain` + `engine` from `domains/clock`, `createPracticeApp` from `core/shell`, then
+`createPracticeApp({ domain: clockDomain, engine, mount: document.getElementById('app'), storage: localStorage })`.
+`store.js` stays (thin wrapper) so `store.test.js` is untouched.
+
+**Hard requirement:** the rendered DOM (element tags, class names, attributes,
+text content, order) must be identical to before for every screen — this phase
+is a pure relocation of the shell. No unit tests cover rendering, so diff the
+behaviour by reading carefully and preserving structure exactly.
+
 ## Invariants to protect
 
 - `npm test` green after every phase (146 tests at baseline).
