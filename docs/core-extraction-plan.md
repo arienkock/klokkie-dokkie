@@ -194,11 +194,20 @@ engine in isolation before any rewiring.
 `concepts.js` → `domains/clock/concepts.js`. Move `pickRound`, `reviewRound`,
 `hourFor`, the `uur_24` case, and grading into `domains/clock/round.js`, rebuilt
 on the engine's `chooseRungAndRole(matrix, track, rng, sessionResults, reviewPool)`
-helper (add it to the engine now). Delete the `mastery.js` shim; update
-`store.js`/`main.js` to import matrix functions from `core/engine` and round
-generation from `domains/clock/round.js`. Split `mastery.test.js` into an engine
-test (`test/engine.test.js`, clock-agnostic config) and a clock-round test
-(`test/clock-round.test.js`). All tests green.
+helper (add it to the engine now). Delete the `mastery.js` shim. `domains/clock/round.js` becomes the single
+transitional clock module: it instantiates the clock engine from
+`domains/clock/concepts.js`, re-exports the engine-bound matrix functions under
+their existing names (so callers change only import paths), and owns
+`pickRound`/`reviewRound`/`hourFor`/`masteredMinuteConcepts`/`grade`. Update
+`store.js`/`main.js` import paths accordingly and switch grading to the domain's
+`grade`. Tests: **rename** `test/mastery.test.js` → `test/clock-round.test.js`
+and retarget its imports to `domains/clock/round.js` + `domains/clock/concepts.js`
+(preserving all 28 tests, no logic surgery); retarget `test/concepts.test.js`
+and `test/store.test.js` import paths; and **add** a small clock-agnostic
+`test/engine.test.js` that drives `createAdaptiveEngine` with a synthetic
+two-track config (proves the engine has no clock coupling). All tests green.
+(The engine-bound re-exports in `round.js` are transitional — Phase 4's
+`createGame` will own the engine instance and dissolve them.)
 
 **Phase 4 — generalize the store.** `core/game` `createGame`. Rename
 `representation→track`; replace edit/ref/time state with `round`+`answerState`;
