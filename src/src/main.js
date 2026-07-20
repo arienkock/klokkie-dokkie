@@ -57,7 +57,7 @@ function ladderRow(matrix, rep, withLabel = true) {
 }
 
 function renderSetup(state) {
-  const { selectedReps, matrix } = state;
+  const { selectedTracks, matrix } = state;
   const el = createElement('section', { class: 'screen screen--center' });
   el.appendChild(renderNav());
   el.appendChild(createElement('h2', { class: 'screen-heading' }, 'Wat wil je oefenen?'));
@@ -65,13 +65,13 @@ function renderSetup(state) {
 
   const grid = createElement('div', { class: 'rep-grid' });
   REPRESENTATIONS.forEach((rep, i) => {
-    const selected = selectedReps.includes(rep);
+    const selected = selectedTracks.includes(rep);
     const card = createElement('button', {
       class: 'rep-card' + (selected ? ' rep-card--selected' : ''),
       type: 'button',
       'aria-pressed': String(selected),
       onClick: () => {
-        store.toggleRep(rep);
+        store.toggleTrack(rep);
         // the toggle re-renders the screen synchronously; put focus back
         app.querySelectorAll('.rep-card')[i]?.focus();
       },
@@ -84,7 +84,7 @@ function renderSetup(state) {
   });
   el.appendChild(grid);
 
-  const canStart = selectedReps.length >= 2;
+  const canStart = selectedTracks.length >= 2;
   const start = btn('Start oefenen', 'btn btn--primary btn--lg', () => store.startSession(),
     canStart ? {} : { disabled: 'disabled' });
   el.appendChild(start);
@@ -104,8 +104,9 @@ function renderGame(state) {
   prevToDestroy.forEach(c => c.destroy());
   prevToDestroy = [];
 
-  const { editTarget, refTarget, referenceTime, editTime, checked, correct, roundMeta, sessionHistory } = state;
-  const minuteConcept = getConcept(roundMeta.minuteConceptId);
+  const { round, answerState, checked, correct, sessionHistory } = state;
+  const { editTarget, refTarget, referenceTime } = round;
+  const minuteConcept = getConcept(round.minuteConceptId);
   const isEditable = !checked;
 
   const makeComponent = (target, editable) => {
@@ -126,7 +127,7 @@ function renderGame(state) {
   const editComp = makeComponent(editTarget, isEditable);
   const refComp  = makeComponent(refTarget,  false);
 
-  const editDisplayTime = editTarget === 'zin' ? referenceTime : editTime;
+  const editDisplayTime = editTarget === 'zin' ? referenceTime : answerState;
   editComp.update(editDisplayTime);
   refComp.update(referenceTime);
 
@@ -137,7 +138,7 @@ function renderGame(state) {
       editComp.onChange(({ correct: zinCorrect }) =>
         zinCorrect ? store.check(true) : setTimeout(() => store.check(false), 700));
     } else {
-      editComp.onChange(t => store.setEditTime(t));
+      editComp.onChange(t => store.setAnswer(t));
     }
   }
 
@@ -198,7 +199,7 @@ function renderCelebration(state) {
 }
 
 function renderSessionEnd(state) {
-  const { sessionHistory, matrix, selectedReps } = state;
+  const { sessionHistory, matrix, selectedTracks } = state;
   const correctCount = sessionHistory.filter(Boolean).length;
   const total = sessionHistory.length;
   const pct = total === 0 ? 0 : Math.round(correctCount / total * 100);
@@ -211,7 +212,7 @@ function renderSessionEnd(state) {
 
   const progress = createElement('div', { class: 'ladder-summary' });
   progress.appendChild(createElement('p', { class: 'complete-sub' }, 'Jouw voortgang:'));
-  for (const rep of selectedReps) {
+  for (const rep of selectedTracks) {
     progress.appendChild(ladderRow(matrix, rep));
   }
   el.appendChild(progress);
@@ -226,7 +227,7 @@ function renderSessionEnd(state) {
 let lastKey = null;
 
 const renderKey = (state) =>
-  `${state.screen}|${state.roundIndex}|${state.checked}|${state.selectedReps.join(',')}`;
+  `${state.screen}|${state.roundIndex}|${state.checked}|${state.selectedTracks.join(',')}`;
 
 store.subscribe(state => {
   const key = renderKey(state);

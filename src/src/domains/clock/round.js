@@ -11,7 +11,7 @@ import {
 import { timesEqualAnalog } from './util/time.js';
 import { pick } from '../../core/util/random.js';
 
-const engine = createAdaptiveEngine({
+export const engine = createAdaptiveEngine({
   tracks: REPRESENTATIONS.map(id => ({ id, ladder: LADDERS[id] })),
 });
 

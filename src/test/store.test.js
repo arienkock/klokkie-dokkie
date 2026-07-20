@@ -43,13 +43,13 @@ describe('createStore', () => {
 });
 
 const answerCorrect = (store) => {
-  store.setEditTime(store.get().referenceTime);
+  store.setAnswer(store.get().round.referenceTime);
   store.check();
 };
 
 const answerWrong = (store) => {
-  const { referenceTime } = store.get();
-  store.setEditTime({ hours: referenceTime.hours, minutes: (referenceTime.minutes + 1) % 60 });
+  const { referenceTime } = store.get().round;
+  store.setAnswer({ hours: referenceTime.hours, minutes: (referenceTime.minutes + 1) % 60 });
   store.check();
 };
 
@@ -68,7 +68,7 @@ describe('createGameStore', () => {
     const store = createGameStore();
     const state = store.get();
     expect(state.screen).toBe('setup');
-    expect(state.selectedReps).toEqual(REPRESENTATIONS);
+    expect(state.selectedTracks).toEqual(REPRESENTATIONS);
   });
 
   it('removes legacy localStorage keys', () => {
@@ -79,18 +79,18 @@ describe('createGameStore', () => {
     expect(localStorage.getItem('klok-oefenen-adaptive')).toBeNull();
   });
 
-  it('toggleRep removes and re-adds a representation', () => {
+  it('toggleTrack removes and re-adds a representation', () => {
     const store = createGameStore();
-    store.toggleRep('zin');
-    expect(store.get().selectedReps).toEqual(['analog', 'digital']);
-    store.toggleRep('zin');
-    expect(store.get().selectedReps).toContain('zin');
+    store.toggleTrack('zin');
+    expect(store.get().selectedTracks).toEqual(['analog', 'digital']);
+    store.toggleTrack('zin');
+    expect(store.get().selectedTracks).toContain('zin');
   });
 
   it('startSession refuses fewer than 2 representations', () => {
     const store = createGameStore();
-    store.toggleRep('zin');
-    store.toggleRep('digital');
+    store.toggleTrack('zin');
+    store.toggleTrack('digital');
     store.startSession();
     expect(store.get().screen).toBe('setup');
   });
@@ -102,31 +102,31 @@ describe('createGameStore', () => {
     expect(state.screen).toBe('game');
     expect(state.roundIndex).toBe(0);
     expect(state.sessionHistory).toEqual([]);
-    expect(state.roundMeta.conceptId).toBe('heel_uur');
-    expect(state.roundMeta.role).toBe('frontier');
-    expect(state.referenceTime.minutes).toBe(0);
-    expect(state.editTime).toEqual({ hours: 1, minutes: 0 });
-    expect(state.editTarget).not.toBe(state.refTarget);
+    expect(state.round.rungId).toBe('heel_uur');
+    expect(state.round.role).toBe('frontier');
+    expect(state.round.referenceTime.minutes).toBe(0);
+    expect(state.answerState).toEqual({ hours: 1, minutes: 0 });
+    expect(state.round.editTarget).not.toBe(state.round.refTarget);
   });
 
   it('startSession persists the representation selection', () => {
     const store = createGameStore();
-    store.toggleRep('zin');
+    store.toggleTrack('zin');
     store.startSession();
     const store2 = createGameStore();
-    expect(store2.get().selectedReps).toEqual(['analog', 'digital']);
+    expect(store2.get().selectedTracks).toEqual(['analog', 'digital']);
   });
 
   it('check marks correct and records into the mastery matrix', () => {
     const store = createGameStore();
     store.startSession();
-    const { roundMeta } = store.get();
+    const { round } = store.get();
     answerCorrect(store);
     const state = store.get();
     expect(state.checked).toBe(true);
     expect(state.correct).toBe(true);
     expect(state.sessionHistory).toEqual([true]);
-    expect(state.matrix[roundMeta.attributionRep][roundMeta.conceptId].window).toEqual([true]);
+    expect(state.matrix[round.attributionTrack][round.rungId].window).toEqual([true]);
   });
 
   it('check marks incorrect and enqueues a revisit', () => {
@@ -146,13 +146,13 @@ describe('createGameStore', () => {
     answerCorrect(store);
     const store2 = createGameStore();
     const { matrix } = store2.get();
-    const rep = store.get().roundMeta.attributionRep;
+    const rep = store.get().round.attributionTrack;
     expect(matrix[rep].heel_uur.window).toEqual([true]);
   });
 
   it('mastering a concept triggers the celebration screen, then continues', () => {
     const store = createGameStore();
-    store.toggleRep('zin'); // analog + digital only, fewer reps to master
+    store.toggleTrack('zin'); // analog + digital only, fewer reps to master
     store.startSession();
     let celebrated = false;
     for (let i = 0; i < 15 && !celebrated; i++) {
@@ -176,7 +176,7 @@ describe('createGameStore', () => {
 
   it('mastery updates the frontier for the mastered representation', () => {
     const store = createGameStore();
-    store.toggleRep('zin');
+    store.toggleTrack('zin');
     store.startSession();
     for (let i = 0; i < 30 && store.get().screen !== 'session-end'; i++) {
       answerCorrect(store);
@@ -238,9 +238,9 @@ describe('createGameStore', () => {
     proceed(store); // now the revisit is due
     const state = store.get();
     expect(state.revisitQueue).toHaveLength(0);
-    expect(state.referenceTime).toEqual(missed.referenceTime);
-    expect(state.editTarget).toBe(missed.editTarget);
-    expect(state.refTarget).toBe(missed.refTarget);
+    expect(state.round.referenceTime).toEqual(missed.referenceTime);
+    expect(state.round.editTarget).toBe(missed.editTarget);
+    expect(state.round.refTarget).toBe(missed.refTarget);
   });
 
   it('goToSetup resets the session but keeps the matrix', () => {
@@ -259,9 +259,9 @@ describe('createGameStore', () => {
     const store = createGameStore();
     store.startSession();
     for (let i = 0; i < 10; i++) {
-      const { editTarget, refTarget, screen } = store.get();
+      const { round, screen } = store.get();
       if (screen !== 'game') break;
-      expect(editTarget).not.toBe(refTarget);
+      expect(round.editTarget).not.toBe(round.refTarget);
       answerCorrect(store);
       proceed(store);
     }
