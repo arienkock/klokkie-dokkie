@@ -2,6 +2,8 @@
 // All ladder/track knowledge comes from `config`; nothing here imports from
 // domains/ or concepts.js. See docs/adaptive-difficulty.md for the rules.
 
+import { pick } from '../util/random.js';
+
 const FRONTIER_WINDOW_MAX = 8;
 const REVIEW_WINDOW_MAX = 4;
 const PROMOTE_STREAK = 3;
@@ -136,6 +138,18 @@ export const createAdaptiveEngine = (config) => {
     return { matrix: next, events };
   };
 
+  // Decide between advancing the frontier and reviewing a mastered rung.
+  // `reviewPool` is the caller-supplied set of reviewable rung ids (domains
+  // apply their own filtering, e.g. the clock drops uur_24). Reproduces the
+  // frontier-vs-review split the clock's pickRound used to inline.
+  const chooseRungAndRole = (matrix, track, rng, sessionResults, reviewPool) => {
+    const frontier = frontierFor(matrix, track);
+    const wantFrontier = frontier !== null &&
+      (reviewPool.length === 0 || rng() < frontierShare(matrix[track][frontier], sessionResults));
+    if (wantFrontier) return { rungId: frontier, role: 'frontier' };
+    return { rungId: pick(reviewPool, rng), role: 'review' };
+  };
+
   return {
     createMatrix,
     normalizeMatrix,
@@ -145,5 +159,6 @@ export const createAdaptiveEngine = (config) => {
     sessionShare,
     frontierShare,
     recordAnswer,
+    chooseRungAndRole,
   };
 };

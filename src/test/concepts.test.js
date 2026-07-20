@@ -2,7 +2,7 @@ import { describe, it, expect } from 'vitest';
 import {
   CONCEPTS, LADDERS, REPRESENTATIONS, getConcept,
   randomHour12, randomHour24, randomHourAny, randomMinutesFor,
-} from '../src/concepts.js';
+} from '../src/domains/clock/concepts.js';
 
 describe('ladders', () => {
   it('analog and zin ladders have 6 rungs without uur_24', () => {

@@ -1,6 +1,6 @@
 import { createGameStore, SESSION_NOMINAL } from './store.js';
-import { getConcept, LADDERS, REPRESENTATIONS } from './concepts.js';
-import { frontierFor } from './mastery.js';
+import { getConcept, LADDERS, REPRESENTATIONS } from './domains/clock/concepts.js';
+import { frontierFor } from './domains/clock/round.js';
 import { DigitalClock } from './domains/clock/widgets/DigitalClock.js';
 import { AnalogClock } from './domains/clock/widgets/AnalogClock.js';
 import { SentenceClock } from './domains/clock/widgets/SentenceClock.js';

@@ -2,8 +2,8 @@ import { describe, it, expect } from 'vitest';
 import {
   createMatrix, normalizeMatrix, frontierFor, masteredMinuteConcepts,
   isStruggling, frontierShare, sessionShare, recordAnswer, pickRound,
-} from '../src/mastery.js';
-import { LADDERS, REPRESENTATIONS, getConcept } from '../src/concepts.js';
+} from '../src/domains/clock/round.js';
+import { LADDERS, REPRESENTATIONS, getConcept } from '../src/domains/clock/concepts.js';
 
 const CONCEPT_MINUTES = {
   heel_uur: [0],

@@ -1,7 +1,7 @@
 import { describe, it, expect, beforeEach } from 'vitest';
 import { createStore, createGameStore, SESSION_NOMINAL, SESSION_CAP } from '../src/store.js';
-import { REPRESENTATIONS } from '../src/concepts.js';
-import { frontierFor } from '../src/mastery.js';
+import { REPRESENTATIONS } from '../src/domains/clock/concepts.js';
+import { frontierFor } from '../src/domains/clock/round.js';
 
 describe('createStore', () => {
   it('returns initial state via get()', () => {

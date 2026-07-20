@@ -1,6 +1,5 @@
-import { getConcept, REPRESENTATIONS } from './concepts.js';
-import { createMatrix, normalizeMatrix, pickRound, recordAnswer } from './mastery.js';
-import { timesEqualAnalog } from './domains/clock/util/time.js';
+import { getConcept, REPRESENTATIONS } from './domains/clock/concepts.js';
+import { createMatrix, normalizeMatrix, pickRound, recordAnswer, grade } from './domains/clock/round.js';
 
 export function createStore(initial) {
   let state = { ...initial };
@@ -173,7 +172,7 @@ export function createGameStore() {
       if (checked) return;
       const correct = typeof forcedCorrect === 'boolean'
         ? forcedCorrect
-        : timesEqualAnalog(referenceTime, editTime);
+        : grade(referenceTime, editTime);
       const { matrix: newMatrix, events } = recordAnswer(
         matrix, roundMeta.attributionRep, roundMeta.conceptId, roundMeta.role, correct
       );

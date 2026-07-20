@@ -1,14 +1,15 @@
-// Clock-bound shim over the generic adaptive engine (core/engine). Keeps the
-// public export surface of the original mastery.js byte-for-byte compatible so
-// store.js, main.js and all tests remain unchanged.
+// Clock domain: round generation + grading, built on the generic adaptive
+// engine (core/engine). Re-exports the engine-bound matrix functions under
+// their existing names so callers change only import paths.
 // See docs/adaptive-difficulty.md for the rules implemented by the engine.
 
+import { createAdaptiveEngine } from '../../core/engine/index.js';
 import {
-  LADDERS, REPRESENTATIONS,
+  LADDERS, REPRESENTATIONS, getConcept,
   randomMinutesFor, randomHour12, randomHour24, randomHourAny,
 } from './concepts.js';
-import { pick } from './core/util/random.js';
-import { createAdaptiveEngine } from './core/engine/index.js';
+import { timesEqualAnalog } from './util/time.js';
+import { pick } from '../../core/util/random.js';
 
 const engine = createAdaptiveEngine({
   tracks: REPRESENTATIONS.map(id => ({ id, ladder: LADDERS[id] })),
@@ -72,19 +73,20 @@ export const pickRound = (matrix, selectedReps, rng = Math.random, sessionResult
     return reviewRound(matrix, editTarget, refTarget, rng);
   }
 
-  const frontier = frontierFor(matrix, editTarget);
-  const reviewPool = masteredMinuteConcepts(matrix, editTarget);
-  const wantFrontier = frontier !== null &&
-    (reviewPool.length === 0 || rng() < frontierShare(matrix[editTarget][frontier], sessionResults));
-
-  if (!wantFrontier) return reviewRound(matrix, editTarget, refTarget, rng);
+  // Delegate the frontier-vs-review decision to the engine; the domain
+  // supplies its uur_24-filtered review pool.
+  const { rungId, role } = engine.chooseRungAndRole(
+    matrix, editTarget, rng, sessionResults, masteredMinuteConcepts(matrix, editTarget)
+  );
 
   return {
     editTarget, refTarget,
     attributionRep: editTarget,
-    conceptId: frontier,
-    minuteConceptId: frontier,
-    role: 'frontier',
-    time: { hours: hourFor(refTarget, matrix, rng), minutes: randomMinutesFor(frontier, rng) },
+    conceptId: rungId,
+    minuteConceptId: rungId,
+    role,
+    time: { hours: hourFor(refTarget, matrix, rng), minutes: randomMinutesFor(rungId, rng) },
   };
 };
+
+export const grade = (referenceTime, editTime) => timesEqualAnalog(referenceTime, editTime);
