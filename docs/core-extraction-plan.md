@@ -9,8 +9,31 @@ the core. The core must be reusable for other problem types — e.g. arithmetic
 The library stays in this repo (no separate npm package yet): a plain directory
 split enforced by import discipline. `core/` must never import from `domains/`.
 
-Status: living document. Each phase below has acceptance criteria; `npm test`
-must stay green after every phase.
+Status: **completed**. All seven phases landed as separate checkpoint commits;
+`npm test` stayed green throughout (146 → 151 tests). See "Outcome" below.
+
+## Outcome (completed)
+
+The core is now domain-agnostic and lives under `src/src/core/` (`engine`,
+`game`, `shell`, `util`), with `core/**` importing nothing from `domains/**`
+(verified per phase). The clock is one plugin under `src/src/domains/clock/`; a
+second plugin, `src/src/domains/arithmetic/`, was added purely to prove the
+abstraction and required **zero changes to `core/`**.
+
+Decisions made during execution (refinements to the original plan):
+- Phase 2 introduced the engine under a compatibility shim (zero caller churn),
+  and Phase 3 did the rewiring — a cleaner, more revert-friendly split than
+  "parameterize + rewire in one step".
+- Phase 3 kept the existing mastery suite intact (renamed to
+  `clock-round.test.js`) and *added* an agnostic `engine.test.js`, rather than
+  splitting/rewriting 28 clock-coupled tests.
+- Phase 6 renamed the generic two-pane layout classes `clock-grid/cell/label` →
+  `problem-grid/cell/label`; widget classes (`clock-face`, etc.) were left alone.
+- The arithmetic PoC ships hold-to-check only (matching the clock's manual
+  submit); an Enter-to-submit nicety was dropped as an unverifiable extra
+  outside the core contract.
+- Phases 4–7 were verified end-to-end by driving both apps in headless
+  Chromium (Playwright), since rendering has no unit coverage.
 
 ---
 
