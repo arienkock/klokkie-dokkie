@@ -175,15 +175,30 @@ dom, hold-button) and `domains/clock/util/` (time, zinnen). Move widgets to
 `domains/clock/widgets/`. Delete app-shell, app-card, their test, and the
 shoelace dep. Fix all imports + test paths. Pure moves, no behaviour change.
 
-**Phase 2 — parameterize the engine.** Convert `mastery.js` into
-`core/engine` `createAdaptiveEngine(config)`; remove its `concepts.js` import.
-Add `chooseRungAndRole` + `masteredRungs`. Keep `pickRound`/grading in the clock
-domain for now (thin wrapper) so tests stay green. Adapt `mastery.test.js`.
+**Phase 2 — introduce the generic engine under a shim (zero caller churn).**
+Create `core/engine/index.js` exporting `createAdaptiveEngine({ tracks })` with
+the *generic matrix* functions only: `createMatrix`, `normalizeMatrix`,
+`frontierFor`, `masteredRungs` (all mastered rungs, no exclusions),
+`isStruggling`, `sessionShare`, `frontierShare`, `recordAnswer`. It imports
+nothing from `domains/` or `concepts.js` — all ladder/track knowledge comes from
+`tracks`. Then reduce `mastery.js` to a thin **clock-bound shim**: instantiate
+the engine from the clock config (`REPRESENTATIONS`/`LADDERS` from
+`concepts.js`), re-export the engine functions under their current names, and
+keep the clock-specific `masteredMinuteConcepts` (= `masteredRungs` minus
+`uur_24`), `pickRound`, `reviewRound`, and `hourFor` exactly as they are.
+**No changes to `store.js`, `main.js`, or any test file** — `mastery.js`'s public
+surface is unchanged, so all 141 tests stay green with no edits. This proves the
+engine in isolation before any rewiring.
 
-**Phase 3 — extract the clock round generator.** Move `pickRound`,
-`reviewRound`, `hourFor`, the `uur_24` case, and grading into
-`domains/clock/round.js`, built on the engine helpers. Move `concepts.js` to
-`domains/clock/`.
+**Phase 3 — extract the clock round generator + rewire callers.** Move
+`concepts.js` → `domains/clock/concepts.js`. Move `pickRound`, `reviewRound`,
+`hourFor`, the `uur_24` case, and grading into `domains/clock/round.js`, rebuilt
+on the engine's `chooseRungAndRole(matrix, track, rng, sessionResults, reviewPool)`
+helper (add it to the engine now). Delete the `mastery.js` shim; update
+`store.js`/`main.js` to import matrix functions from `core/engine` and round
+generation from `domains/clock/round.js`. Split `mastery.test.js` into an engine
+test (`test/engine.test.js`, clock-agnostic config) and a clock-round test
+(`test/clock-round.test.js`). All tests green.
 
 **Phase 4 — generalize the store.** `core/game` `createGame`. Rename
 `representation→track`; replace edit/ref/time state with `round`+`answerState`;
